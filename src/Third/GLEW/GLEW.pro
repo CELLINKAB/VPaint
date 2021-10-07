@@ -26,7 +26,7 @@ HEADERS += glew.h \
            glxew.h \
            wglew.h
 
-DFEFINES += GLEW_NO_GLU
+DEFINES += GLEW_NO_GLU
 
 unix {
     target.path = /usr/lib
