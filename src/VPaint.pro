@@ -21,4 +21,6 @@ SUBDIRS += \
     Third/GLEW \
     Gui
 
+requires(!heartos)
+
 Gui.depends = Third/GLEW
