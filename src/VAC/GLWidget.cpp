@@ -771,6 +771,9 @@ void GLWidget::initializeGL()
 
 void GLWidget::resizeGL(int width, int height)
 {
+    Q_UNUSED(width);
+    Q_UNUSED(height);
+
     emit viewResized();
 }
 
