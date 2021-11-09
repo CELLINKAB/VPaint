@@ -737,7 +737,7 @@ void GLWidget::initializeGL()
     if (queryExtensions) {
         QList<QByteArray> extensions = context()->extensions().toList();
         qDebug() << "Supported extensions (" << extensions.count() << ")";
-        foreach (const QByteArray &extension, extensions)
+        for (const QByteArray &extension: extensions)
             qDebug() << "    " << extension;
     }
 

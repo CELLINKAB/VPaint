@@ -382,7 +382,7 @@ MultiView::~MultiView()
 
 void MultiView::update()
 {
-    foreach(ViewWidget * viewWidget, views_)
+    for(ViewWidget * viewWidget: views_)
     {
         View * view = viewFromViewWidget_(viewWidget);
         if(view->isVisible())
@@ -392,7 +392,7 @@ void MultiView::update()
 
 void MultiView::updatePicking()
 {
-    foreach(ViewWidget * viewWidget, views_)
+    for(ViewWidget * viewWidget: views_)
     {
         View * view = viewFromViewWidget_(viewWidget);
         if(view->isVisible())

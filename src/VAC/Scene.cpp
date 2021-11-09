@@ -120,7 +120,7 @@ void Scene::copyFrom(Scene * other)
     clear(true);
 
     // Copy layers
-    foreach(Layer * layer, other->layers_)
+    for(Layer * layer: other->layers_)
         addLayer_(layer->clone(), true);
     activeLayerIndex_ = other->activeLayerIndex_;
 
@@ -143,7 +143,7 @@ void Scene::clear(bool silent)
     blockSignals(true);
 
     // Delete all layers
-    foreach(Layer * layer, layers_)
+    for(Layer * layer: layers_)
         delete layer;
     layers_.clear();
     activeLayerIndex_ = -1;
@@ -177,7 +177,7 @@ void Scene::save(QTextStream & out)
     out << Save::newField("SceneObjects");
     out << "\n" << Save::indent() << "[";
     Save::incrIndent();
-    foreach(Layer * layer, layers_)
+    for(Layer * layer: layers_)
     {
         out << Save::openCurlyBrackets();
         layer->vac()->save(out);
@@ -191,7 +191,7 @@ void Scene::save(QTextStream & out)
 void Scene::exportSVG(Time t, QTextStream & out)
 {
     // Export Layers
-    foreach(Layer * layer, layers_)
+    for(Layer * layer: layers_)
     {
         layer->background()->exportSVG(
             t.frame(), out, left(), top(), width(), height());
@@ -231,7 +231,7 @@ void Scene::read(QTextStream & in)
 
 void Scene::writeAllLayers(XmlStreamWriter & xml)
 {
-    foreach(Layer * layer, layers_)
+    for(Layer * layer: layers_)
     {
         xml.writeStartElement("layer");
         layer->write(xml);
@@ -289,7 +289,7 @@ void Scene::writeCanvas(XmlStreamWriter & xml)
 
 void Scene::relativeRemap(const QDir & oldDir, const QDir & newDir)
 {
-    foreach(Layer * layer, layers_)
+    for(Layer * layer: layers_)
     {
         layer->background()->relativeRemap(oldDir, newDir);
     }
@@ -346,7 +346,7 @@ void Scene::drawCanvas(ViewSettings & /*viewSettings*/)
 void Scene::draw(Time time, ViewSettings & viewSettings)
 {
     // Draw layers
-    foreach(Layer * layer, layers_)
+    for(Layer * layer: layers_)
     {
         layer->draw(time, viewSettings);
     }
@@ -414,19 +414,19 @@ void Scene::toggle(Time time, int index, int id)
 
 void Scene::deselectAll(Time time)
 {
-    foreach(Layer * layer, layers_)
+    for(Layer * layer: layers_)
         layer->deselectAll(time);
 }
 
 void Scene::deselectAll()
 {
-    foreach(Layer * layer, layers_)
+    for(Layer * layer: layers_)
         layer->deselectAll();
 }
 
 void Scene::invertSelection()
 {
-    foreach(Layer * layer, layers_)
+    for(Layer * layer: layers_)
         layer->invertSelection();
 }
 
