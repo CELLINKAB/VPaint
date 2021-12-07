@@ -299,7 +299,7 @@ VAC::~VAC()
 
 QString VAC::stringType()
 {
-    return "VectorAnimationComplex";
+    return QStringLiteral("VectorAnimationComplex");
 }
 
 
@@ -491,7 +491,7 @@ void VAC::draw(Time time, ViewSettings & viewSettings)
     ViewSettings::DisplayMode displayMode = viewSettings.displayMode();
 
     // Illustration mode
-    if( (displayMode == ViewSettings::ILLUSTRATION))
+    if( displayMode == ViewSettings::ILLUSTRATION)
     {
         // Draw all cells
         for(auto c: zOrdering_)
@@ -503,7 +503,7 @@ void VAC::draw(Time time, ViewSettings & viewSettings)
     }
 
     // Outline only mode
-    else if( (displayMode == ViewSettings::OUTLINE) )
+    else if( displayMode == ViewSettings::OUTLINE )
     {
         // Draw all cells
         for(auto c: zOrdering_)
@@ -515,7 +515,7 @@ void VAC::draw(Time time, ViewSettings & viewSettings)
     }
 
     // Illustration + Outline mode
-    else if( (displayMode == ViewSettings::ILLUSTRATION_OUTLINE) )
+    else if( displayMode == ViewSettings::ILLUSTRATION_OUTLINE )
     {
         // First pass
         for(auto c: zOrdering_)
@@ -689,7 +689,7 @@ void VAC::draw(Time time, ViewSettings & viewSettings)
     }
 
     // Draw edge orientation
-    if(DevSettings::getBool("draw edge orientation"))
+    if(DevSettings::getBool(QStringLiteral("draw edge orientation")))
     {
         KeyEdgeSet edges = cells();
         foreach(KeyEdge * e, edges)
@@ -722,7 +722,7 @@ void VAC::drawPick(Time time, ViewSettings & viewSettings)
 {
     ViewSettings::DisplayMode displayMode = viewSettings.displayMode();
 
-    if( (displayMode == ViewSettings::ILLUSTRATION) )
+    if( displayMode == ViewSettings::ILLUSTRATION )
     {
         // Draw all cells
         for(auto c: zOrdering_)
@@ -731,7 +731,7 @@ void VAC::drawPick(Time time, ViewSettings & viewSettings)
         }
     }
 
-    else if( (displayMode == ViewSettings::OUTLINE) )
+    else if( displayMode == ViewSettings::OUTLINE )
     {
         // Draw all cells
         for(auto c: zOrdering_)
@@ -740,7 +740,7 @@ void VAC::drawPick(Time time, ViewSettings & viewSettings)
         }
     }
 
-    else if( (displayMode == ViewSettings::ILLUSTRATION_OUTLINE) )
+    else if( displayMode == ViewSettings::ILLUSTRATION_OUTLINE )
     {
         // first pass: pick faces normally
         for(auto c: zOrdering_)
@@ -3861,7 +3861,7 @@ void VAC::insertSketchedEdgeInVAC(double tolerance, bool useFaceToConsiderForCut
             }
         }
     }
-    int nClusters= clusters.size();
+    int nClusters = int(clusters.size());
 
 #if MYDEBUG
     /////////  Print clusters  /////////
