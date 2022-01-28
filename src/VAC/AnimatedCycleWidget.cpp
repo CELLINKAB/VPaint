@@ -967,7 +967,7 @@ void AnimatedCycleWidget::computeItemHeightAndY()
 
     // Sort key times and compute height and Y of items
     QList<int> keyTimesSorted = keyTimes.toList();
-    qSort(keyTimesSorted);
+    std::sort(std::begin(keyTimesSorted), std::end(keyTimesSorted));
     for(Iterator it = nodeToItem_.begin(); it != nodeToItem_.end(); ++it)
     {
         AnimatedCycleNode * node = it.key();

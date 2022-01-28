@@ -167,7 +167,7 @@ QList<KeyHalfedge> KeyHalfedge::sorted(const QList<KeyHalfedge> & adj)
     }
 
     // sort the he according to this angle
-    qSort(list);
+    std::sort(std::begin(list), std::end(list));
 
     // return the he sorted
     QList<KeyHalfedge> res;

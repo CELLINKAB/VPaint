@@ -78,8 +78,8 @@ class Q_VPAINT_EXPORT IntersectionList: public QList<Intersection*>
 {
 public:
 
-    void sort() {qSort(begin(), end(), Intersection::pLessThanS);}
-    void sortT() {qSort(begin(), end(), Intersection::pLessThanT);}
+    void sort() {std::sort(begin(), end(), Intersection::pLessThanS);}
+    void sortT() {std::sort(begin(), end(), Intersection::pLessThanT);}
 
     void clean()
     {
