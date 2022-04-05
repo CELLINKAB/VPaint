@@ -160,7 +160,7 @@ public:
     const QRectF& selectedGeometry() const;
     void updateSelectedGeometry(double x, double y, double w, double h, bool isInteractive = false);
 
-    Eigen::Vector2d mousePasteCursorPos() const;
+    const QPointF& mousePastePosition() const;
     void storeMousePastePos();
 
     // Display modes
@@ -325,10 +325,8 @@ private:
     double pasteDeltaX_;
     double pasteDeltaY_;
 
-    double mousePasteX_;
-    double mousePasteY_;
-
     QRectF selectedGeometry_;
+    QPointF mousePastePosition_;
 };
 
 class Q_VPAINT_EXPORT ToolModeAction: public QAction

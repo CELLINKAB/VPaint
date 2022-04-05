@@ -72,8 +72,8 @@ Global::Global(MainWindow * w) :
     selectAlphaRatio_(3.0),
     pasteDeltaX_(15),
     pasteDeltaY_(15),
-    mousePasteX_(0),
-    mousePasteY_(0)
+    selectedGeometry_{0, 0, 0, 0},
+    mousePastePosition_{0, 0}
 {
     // Color selectors
     currentColor_ = new ColorSelector();
@@ -983,15 +983,15 @@ void Global::updateSelectedGeometry(double x, double y, double w, double h, bool
     }
 }
 
-Eigen::Vector2d Global::mousePasteCursorPos() const
+const QPointF& Global::mousePastePosition() const
 {
-    return Eigen::Vector2d(mousePasteX_, mousePasteY_);
+    return mousePastePosition_;
 }
 
 void Global::storeMousePastePos()
 {
-    mousePasteX_ = xSceneCursorPos_;
-    mousePasteY_ = ySceneCursorPos_;
+    mousePastePosition_.setX(xSceneCursorPos_);
+    mousePastePosition_.setY(ySceneCursorPos_);
     emit rightMouseClicked();
 }
 

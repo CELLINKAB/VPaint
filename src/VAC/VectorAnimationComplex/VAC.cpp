@@ -373,7 +373,7 @@ QMap<int,int> VAC::import(VAC * other, bool selectImportedCells, bool isMousePas
         prepareDragAndDrop(boundingBox.xMin(), boundingBox.yMin(), timeInteractivity_);
         if (isMousePaste)
         {
-            performDragAndDrop(global()->mousePasteCursorPos()[0], global()->mousePasteCursorPos()[1]);
+            performDragAndDrop(global()->mousePastePosition().x(), global()->mousePastePosition().y());
         }
         else
         {
