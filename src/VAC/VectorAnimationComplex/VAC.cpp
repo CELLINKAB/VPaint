@@ -277,6 +277,7 @@ void VAC::initNonCopyable()
     signalCounter_ = 0;
     pasteDeltaX_ = 0;
     pasteDeltaY_ = 0;
+    isManualTransform = false;
 }
 
 void VAC::initCopyable()
@@ -291,7 +292,8 @@ void VAC::initCopyable()
 VAC::VAC() :
     SceneObject(),
     pasteDeltaX_(0),
-    pasteDeltaY_(0)
+    pasteDeltaY_(0),
+    isManualTransform(false)
 {
     initNonCopyable();
     initCopyable();
@@ -351,47 +353,37 @@ QMap<int,int> VAC::import(VAC * other, bool selectImportedCells, bool isMousePas
         ordering << c;
     }
 
-    // Take ownership of all cells
-    KeyVertex* firstKeyVertex = nullptr;
-    auto leftX = global()->scene()->width();
-    auto topY = global()->scene()->height();
-    for (Cell* cell: qAsConst(ordering))
+    if (!ordering.isEmpty())
     {
-        int oldID = cell->id();
-        copyOfOther->removeCell_(cell);
-        insertCellLast_(cell);
-        if(selectImportedCells)
-            addToSelection(cell, true);
-        res[oldID] = cell->id();
-
-        if (KeyVertex* currentKeyVertex = cell->toKeyVertex())
+        // Take ownership of all cells
+        beginAggregateSignals_();
+        BoundingBox boundingBox;
+        for (Cell* cell: qAsConst(ordering))
         {
-            auto currentX = currentKeyVertex->pos()[0];
-            auto currentY = currentKeyVertex->pos()[1];
-
-            leftX = currentX < leftX ? currentX : leftX;
-            topY = currentY < topY ? currentY : topY;
-
-            if (firstKeyVertex == nullptr)
-            {
-                firstKeyVertex = currentKeyVertex;
-            }
+            int oldID = cell->id();
+            copyOfOther->removeCell_(cell);
+            insertCellLast_(cell);
+            if(selectImportedCells)
+                addToSelection(cell, true);
+            res[oldID] = cell->id();
+            boundingBox.unite(cell->outlineBoundingBox(timeInteractivity_));
         }
-    }
 
-    setHoveredCell(firstKeyVertex);
-    prepareDragAndDrop(leftX, topY, firstKeyVertex->time());
-    if (isMousePaste)
-    {
-        performDragAndDrop(global()->sceneCursorPos()[0], global()->sceneCursorPos()[1]);
+        setHoveredCell(ordering.at(0));
+        prepareDragAndDrop(boundingBox.xMin(), boundingBox.yMin(), timeInteractivity_);
+        if (isMousePaste)
+        {
+            performDragAndDrop(global()->mousePasteCursorPos()[0], global()->mousePasteCursorPos()[1]);
+        }
+        else
+        {
+            pasteDeltaX_ += global()->pasteDeltaX();
+            pasteDeltaY_ += global()->pasteDeltaY();
+            performDragAndDrop(boundingBox.xMin() + pasteDeltaX_, boundingBox.yMin() + pasteDeltaY_);
+        }
+        completeDragAndDrop(false);
+        endAggregateSignals_();
     }
-    else
-    {
-        pasteDeltaX_ += global()->pasteDeltaX();
-        pasteDeltaY_ += global()->pasteDeltaY();
-        performDragAndDrop(leftX + pasteDeltaX_, topY + pasteDeltaY_);
-    }
-    completeDragAndDrop();
 
     // Delete copy of vac
     delete copyOfOther;
@@ -880,16 +872,29 @@ void VAC::toggle(Time time, int id)
 void VAC::deselectAll(Time time)
 {
     CellSet cellsToDeselect;
-    for(Cell * cell: selectedCells())
-        if(cell->exists(time))
+    for(Cell * cell: selectedCells()) {
+        if(cell->exists(time)) {
             cellsToDeselect << cell;
+        }
+    }
     removeFromSelection(cellsToDeselect,false);
+
+    if (isManualTransform) {
+        emit checkpoint();
+    }
+    isManualTransform = false;
 }
 
 void VAC::deselectAll()
 {
-    if(numSelectedCells() != 0)
+    if(numSelectedCells() != 0) {
         setSelectedCells(CellSet(),false);
+    }
+
+    if (isManualTransform) {
+        emit checkpoint();
+    }
+    isManualTransform = false;
 }
 
 void VAC::invertSelection()
@@ -1037,7 +1042,8 @@ void VAC::exportSVG_(Time t, QTextStream & out)
 VAC::VAC(QTextStream & in) :
     SceneObject(),
     pasteDeltaX_(0),
-    pasteDeltaY_(0)
+    pasteDeltaY_(0),
+    isManualTransform(false)
 
 {
     clear();
@@ -1989,6 +1995,39 @@ void VAC::adjustSelectColorsAll()
             }
         }
     }
+}
+
+void VAC::calculateSelectedGeometry()
+{
+    if (!selectedCells().empty()) {
+        BoundingBox obb;
+        for (auto cell : selectedCells())
+        {
+            obb.unite(cell->outlineBoundingBox(timeInteractivity_));
+        }
+        global()->updateSelectedGeometry(obb.xMin(), obb.yMin(), obb.width(), obb.height());
+    }
+}
+
+void VAC::setManualWidth(double newWidth)
+{
+    isManualTransform = true;
+    transformTool_.setManualWidth(newWidth, timeInteractivity_);
+    emit changed();
+}
+
+void VAC::setManualHeight(double newHeight)
+{
+    isManualTransform = true;
+    transformTool_.setManualHeight(newHeight, timeInteractivity_);
+    emit changed();
+}
+
+void VAC::setManualRotation(double angle)
+{
+    isManualTransform = true;
+    transformTool_.setManualRotation(angle, timeInteractivity_);
+    emit changed();
 }
 
 bool VAC::cutFace_(KeyFace * face, KeyEdge * edge, CutFaceFeedback * feedback)
@@ -6608,13 +6647,14 @@ void VAC::performDragAndDrop(double x, double y)
     //emit changed();
 }
 
-void VAC::completeDragAndDrop()
+void VAC::completeDragAndDrop(bool isEmitCheckpoint)
 {
     transformTool_.endDragAndDrop();
     global()->setDragAndDropping(false);
 
-    //emit changed();
-    emit checkpoint();
+    if (isEmitCheckpoint) {
+        emit checkpoint();
+    }
 }
 
 void VAC::beginTransformSelection(double x0, double y0, Time time)

@@ -70,6 +70,9 @@
 #define  HEPTAGON_ACTION                                    408
 #define  OCTAGON_ACTION                                     409
 
+namespace {
+const constexpr auto CIRCLE_ANGLES = 40;
+}
 
 View::View(VPaint::Scene * scene, QWidget * parent) :
     GLWidget(parent, true),
@@ -204,13 +207,7 @@ int View::decideClicAction()
     vac_ = scene_->activeVAC();
     if (vac_)
     {
-        if (mouse_RightButton_)
-        {
-            //Temporary for test paste by right click
-            global()->mainWindow()->paste(true);
-        }
-        // Selection
-        else if (global()->toolMode() == Global::SELECT && mouse_LeftButton_)
+        if (global()->toolMode() == Global::SELECT && mouse_LeftButton_)
         {
             // Left = set selection
             if(!mouse_AltWasDown_ &&
@@ -1119,29 +1116,26 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
         vac_->endSketchEdge();
         lastDrawnCells.clear();
         auto keyVertices = vac_->instantVertices();
-        keyVertices.last()->setShapeType(ShapeType::CURVE);
-        lastDrawnCells << keyVertices.last();
-        keyVertices.at(keyVertices.count() - 2)->setShapeType(ShapeType::CURVE);
-        lastDrawnCells << keyVertices.at(keyVertices.count() - 2);
-        lastDrawnCells <<  vac_->instantEdges().last();
-        if (global()->isDrawShapeFaceEnabled())
-        {
-            for (auto cell : lastDrawnCells)
-            {
-                vac_->addToSelection(cell, false);
+        if (!keyVertices.isEmpty()) {
+            keyVertices.last()->setShapeType(ShapeType::CURVE);
+            lastDrawnCells << keyVertices.last();
+            keyVertices.at(keyVertices.count() - 2)->setShapeType(ShapeType::CURVE);
+            lastDrawnCells << keyVertices.at(keyVertices.count() - 2);
+            lastDrawnCells <<  vac_->instantEdges().last();
+            if (global()->isDrawShapeFaceEnabled()) {
+                for (auto cell : lastDrawnCells)
+                {
+                    vac_->addToSelection(cell, false);
+                }
+                scene()->createFace();
+                auto faceCell = vac_->faces().last();
+                faceCell->setShapeType(ShapeType::CURVE);
+                vac_->addToSelection(faceCell);
+                lastDrawnCells << faceCell;
             }
-            scene()->createFace();
-            auto faceCell = vac_->faces().last();
-            faceCell->setShapeType(ShapeType::CURVE);
-            vac_->addToSelection(faceCell);
-            lastDrawnCells << faceCell;
             endDrawShape();
+            scene()->emitShapeDrawn(ShapeType::CURVE);
         }
-
-        adjustCellsColors();
-        lastDrawnCells.clear();
-
-        scene()->emitShapeDrawn(ShapeType::CURVE);
         break;
     }
     default:
@@ -1363,7 +1357,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
     {
         verticesPoints[0] = QPointF(shapeStartX, shapeStartY);
         verticesPoints[1] = QPointF(xScene, yScene);
-        processDrawShape(false);
+        processDrawShape();
         break;
     }
     case ShapeType::CIRCLE:
@@ -1443,6 +1437,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
         break;
     }
 
+    global()->updateSelectedGeometry(leftX, topY, shapeWidth, shapeHeight, true);
     lastMousePos_ = currentMousePos;
 }
 

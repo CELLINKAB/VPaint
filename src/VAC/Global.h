@@ -157,6 +157,12 @@ public:
     void setPasteDelta(double dx, double dy);
     void setPasteDelta(double delta);
 
+    const QRectF& selectedGeometry() const;
+    void updateSelectedGeometry(double x, double y, double w, double h, bool isInteractive = false);
+
+    Eigen::Vector2d mousePasteCursorPos() const;
+    void storeMousePastePos();
+
     // Display modes
     enum DisplayMode {
         ILLUSTRATION,
@@ -195,6 +201,8 @@ signals:
     void keyboardModifiersChanged();
     void edgeColorChanged();
     void faceColorChanged();
+    void rightMouseClicked();
+    void interactiveGeometryChanged();
 
 public slots:
     void setToolMode(Global::ToolMode mode);
@@ -316,6 +324,11 @@ private:
 
     double pasteDeltaX_;
     double pasteDeltaY_;
+
+    double mousePasteX_;
+    double mousePasteY_;
+
+    QRectF selectedGeometry_;
 };
 
 class Q_VPAINT_EXPORT ToolModeAction: public QAction

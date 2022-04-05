@@ -125,7 +125,7 @@ void Scene::copyFrom(Scene * other)
 
     // Copy layers
     for(Layer * layer: qAsConst(other->layers_))
-        addLayer_(layer->clone(), true);
+        addLayer_(layer->cloneWithBackground(), true);
     activeLayerIndex_ = other->activeLayerIndex_;
 
     // Reset hovered

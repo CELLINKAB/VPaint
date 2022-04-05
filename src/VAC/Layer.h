@@ -73,6 +73,8 @@ public:
     void setVisible(bool b);
     qreal layerHeight() const;
     void setLayerHeight(qreal height);
+    Layer* cloneWithBackground();
+
 signals:
     // defined in base class (Scene Object)
     // void changed();

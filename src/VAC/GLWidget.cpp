@@ -625,6 +625,9 @@ void GLWidget::delegateMouseMove(QMouseEvent *event)
 
 void GLWidget::mouseReleaseEvent(QMouseEvent *event)
 {
+    if (event->button() == Qt::RightButton) {
+        global()->storeMousePastePos();
+    }
     delegateMouseRelease(event);
 }
 void GLWidget::delegateMouseRelease(QMouseEvent *event)

@@ -737,6 +737,11 @@ void TransformTool::draw(const CellSet & cells, Time time, ViewSettings & viewSe
     {
         glPopMatrix();
     }
+
+    if (cells_.count())
+    {
+        global()->updateSelectedGeometry(obb.xMin(), obb.yMin(), obb.width(), obb.height(), true);
+    }
 }
 
 void TransformTool::drawPick(const CellSet & cells, Time time, ViewSettings & viewSettings) const
@@ -941,7 +946,7 @@ double scaleFactor_(double x, double x0, double xPivot, double dx)
 
 }
 
-void TransformTool::continueTransform(double x, double y)
+void TransformTool::continueTransform(double x, double y, double angle)
 {
     // Cache mouse position
     x_ = x;
@@ -1016,8 +1021,8 @@ void TransformTool::continueTransform(double x, double y)
 
             const double theta0 = std::atan2(y0_ - yPivot, x0_ - xPivot);
             const double theta  = std::atan2(y   - yPivot, x   - xPivot);
-            double dTheta = theta - theta0; // in [-2*PI, 2*PI]
-            if (isTransformConstrained_())
+            double dTheta = angle != 0 ? angle : theta - theta0; // in [-2*PI, 2*PI]
+            if (angle == 0 && isTransformConstrained_())
             {
                 for (int i=-8; i<10; ++i)
                 {
@@ -1097,6 +1102,77 @@ void TransformTool::performDragAndDrop(double dx, double dy)
 void TransformTool::endDragAndDrop()
 {
     dragAndDropping_ = false;
+}
+
+void TransformTool::setManualWidth(double newWidth, Time time)
+{
+    BoundingBox obb;
+    for (auto cell : cells_)
+    {
+        obb.unite(cell->outlineBoundingBox(time));
+    }
+
+    if (obb.isProper())
+    {
+        double delta = (newWidth - obb.width()) / 2;
+
+        if (abs(delta) > EPS)
+        {
+            hovered_ = LeftScale;
+            beginTransform(obb.xMin(), obb.yMid(), time);
+            continueTransform(obb.xMin() - delta, obb.yMid());
+            endTransform();
+
+            hovered_ = RightScale;
+            beginTransform(obb.xMax(), obb.yMid(), time);
+            continueTransform(obb.xMax() + delta, obb.yMid());
+            endTransform();
+            hovered_ = None;
+        }
+    }
+}
+
+void TransformTool::setManualHeight(double newHeight, Time time)
+{
+    BoundingBox obb;
+    for (auto cell : cells_)
+    {
+        obb.unite(cell->outlineBoundingBox(time));
+    }
+
+    if (obb.isProper())
+    {
+        double delta = (newHeight - obb.height()) / 2;
+
+        if (abs(delta) > EPS)
+        {
+            hovered_ = TopScale;
+            beginTransform(obb.xMid(), obb.yMin(), time);
+            continueTransform(obb.xMid(), obb.yMin() - delta);
+            endTransform();
+
+            hovered_ = BottomScale;
+            beginTransform(obb.xMid(), obb.yMax(), time);
+            continueTransform(obb.xMid(), obb.yMax() + delta);
+            endTransform();
+            hovered_ = None;
+        }
+    }
+}
+
+void TransformTool::setManualRotation(double angle, Time time)
+{
+    BoundingBox obb;
+    for (auto cell : cells_)
+    {
+        obb.unite(cell->outlineBoundingBox(time));
+    }
+
+    hovered_ = TopLeftRotate;
+    beginTransform(obb.xMin(), obb.yMin(), time);
+    continueTransform(obb.xMin(), obb.yMin(), angle);
+    endTransform();
+    hovered_ = None;
 }
 
 void TransformTool::onKeyboardModifiersChanged()

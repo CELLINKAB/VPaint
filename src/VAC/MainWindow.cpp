@@ -584,6 +584,11 @@ void MainWindow::parseKeyPressEvent(QKeyEvent* event)
     {
         paste();
     }
+    else if (keySequence == QKeySequence(Qt::CTRL + Qt::Key_D))
+    {
+        copy();
+        paste();
+    }
     else if (keySequence == QKeySequence(QKeySequence::Cut))
     {
         cut();

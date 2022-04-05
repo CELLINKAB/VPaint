@@ -71,7 +71,9 @@ Global::Global(MainWindow * w) :
     selectColorRatio_(1.4),
     selectAlphaRatio_(3.0),
     pasteDeltaX_(15),
-    pasteDeltaY_(15)
+    pasteDeltaY_(15),
+    mousePasteX_(0),
+    mousePasteY_(0)
 {
     // Color selectors
     currentColor_ = new ColorSelector();
@@ -604,6 +606,7 @@ Global::ToolMode Global::toolMode() const
 
 void Global::setToolMode(Global::ToolMode mode)
 {
+    scene()->deselectAll();
     // Check consistency with action state
     if(!toolModeActions[mode]->isChecked())
         toolModeActions[mode]->setChecked(true);
@@ -960,6 +963,36 @@ void Global::setPasteDelta(double delta)
 {
     pasteDeltaX_ = delta;
     pasteDeltaY_ = delta;
+}
+
+const QRectF& Global::selectedGeometry() const
+{
+    return selectedGeometry_;
+}
+
+void Global::updateSelectedGeometry(double x, double y, double w, double h, bool isInteractive)
+{
+    selectedGeometry_.setX(x);
+    selectedGeometry_.setY(y);
+    selectedGeometry_.setWidth(w);
+    selectedGeometry_.setHeight(h);
+
+    if (isInteractive)
+    {
+        emit interactiveGeometryChanged();
+    }
+}
+
+Eigen::Vector2d Global::mousePasteCursorPos() const
+{
+    return Eigen::Vector2d(mousePasteX_, mousePasteY_);
+}
+
+void Global::storeMousePastePos()
+{
+    mousePasteX_ = xSceneCursorPos_;
+    mousePasteY_ = ySceneCursorPos_;
+    emit rightMouseClicked();
 }
 
 bool Global::useTabletPressure() const
