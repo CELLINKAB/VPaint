@@ -265,6 +265,21 @@ void Layer::setLayerHeight(qreal height)
     }
 }
 
+// Needed for the undo function to work properly,
+// because we use the background for show the surface now.
+// In the future planned to draw the surface on OpenGL and this can be removed
+Layer* Layer::cloneWithBackground()
+{
+    Layer * res = new Layer(NoInit_());
+    res->init_(new Background(*background(), res),
+               vac_->clone(),
+               name_,
+               isVisible_,
+               layerHeight_);
+
+    return res;
+}
+
 void Layer::exportSVG_(Time t, QTextStream & out)
 {
     // This function does not export the background, because the API

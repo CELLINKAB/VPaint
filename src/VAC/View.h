@@ -59,7 +59,6 @@ struct Q_VPAINT_EXPORT MouseEvent
     // Modifiers keys: any number of these can be true
     bool alt, control, shift;
 };
-#define CIRCLE_ANGLES 50
 
 class Q_VPAINT_EXPORT View: public GLWidget
 {

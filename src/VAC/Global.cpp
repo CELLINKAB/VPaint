@@ -71,7 +71,9 @@ Global::Global(MainWindow * w) :
     selectColorRatio_(1.4),
     selectAlphaRatio_(3.0),
     pasteDeltaX_(15),
-    pasteDeltaY_(15)
+    pasteDeltaY_(15),
+    selectedGeometry_{0, 0, 0, 0},
+    mousePastePosition_{0, 0}
 {
     // Color selectors
     currentColor_ = new ColorSelector();
@@ -604,6 +606,7 @@ Global::ToolMode Global::toolMode() const
 
 void Global::setToolMode(Global::ToolMode mode)
 {
+    scene()->deselectAll();
     // Check consistency with action state
     if(!toolModeActions[mode]->isChecked())
         toolModeActions[mode]->setChecked(true);
@@ -960,6 +963,30 @@ void Global::setPasteDelta(double delta)
 {
     pasteDeltaX_ = delta;
     pasteDeltaY_ = delta;
+}
+
+// Update the selection geometry for display the correct selection size in the Shape parameter bar
+// And emitting signal if selection geometry was changed interactive(when drawing and transforming)
+void Global::updateSelectedGeometry(double x, double y, double w, double h, bool isInteractive)
+{
+    selectedGeometry_.setX(x);
+    selectedGeometry_.setY(y);
+    selectedGeometry_.setWidth(w);
+    selectedGeometry_.setHeight(h);
+
+    if (isInteractive)
+    {
+        emit interactiveGeometryChanged();
+    }
+}
+
+// Storing the mouse position on scene for be able to paste in right position
+// Emiting rightMouseClicked() for show copy/paste popup
+void Global::storeMousePastePos()
+{
+    mousePastePosition_.setX(xSceneCursorPos_);
+    mousePastePosition_.setY(ySceneCursorPos_);
+    emit rightMouseClicked();
 }
 
 bool Global::useTabletPressure() const

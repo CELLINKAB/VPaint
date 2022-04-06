@@ -86,13 +86,18 @@ public:
 
     // Transform selection
     void beginTransform(double x0, double y0, Time time);
-    void continueTransform(double x, double y);
+    // Added the angle parameter for the manual rotating
+    void continueTransform(double x, double y, double angle = 0.0);
     void endTransform();
 
     // Drag and drop transform tool
     void prepareDragAndDrop();
     void performDragAndDrop(double dx, double dy);
     void endDragAndDrop();
+
+    void setManualWidth(double newWidth, Time time);
+    void setManualHeight(double newHeight, Time time);
+    void setManualRotation(double angle, Time time);
 
 private slots:
     void onKeyboardModifiersChanged();

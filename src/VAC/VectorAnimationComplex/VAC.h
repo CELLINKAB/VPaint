@@ -158,7 +158,7 @@ public:
     // -- Drag and drop --
     void prepareDragAndDrop(double x0, double y0, Time time);
     void performDragAndDrop(double x, double y);
-    void completeDragAndDrop();
+    void completeDragAndDrop(bool emitCheckpoint = true);
 
     // -- Transform selection --
     void beginTransformSelection(double x0, double y0, Time time);
@@ -208,6 +208,12 @@ public:
     void adjusSelectedAndHighlighted(Cell* cell);
     void adjustSelectColors(Cell* cell);
     void adjustSelectColorsAll();
+
+    void calculateSelectedGeometry();
+
+    void setManualWidth(double newWidth);
+    void setManualHeight(double newHeight);
+    void setManualRotation(double angle);
 
     /////////////////////////////////////////////////////////////////
     //                 MOUSE CLIC ACTIONS                          //
@@ -483,6 +489,8 @@ private:
 
     double pasteDeltaX_;
     double pasteDeltaY_;
+
+    bool isManualTransform_;
 };
 
 }
