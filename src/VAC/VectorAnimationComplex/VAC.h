@@ -158,7 +158,7 @@ public:
     // -- Drag and drop --
     void prepareDragAndDrop(double x0, double y0, Time time);
     void performDragAndDrop(double x, double y);
-    void completeDragAndDrop(bool isEmitCheckpoint = true);
+    void completeDragAndDrop(bool emitCheckpoint = true);
 
     // -- Transform selection --
     void beginTransformSelection(double x0, double y0, Time time);
@@ -490,7 +490,7 @@ private:
     double pasteDeltaX_;
     double pasteDeltaY_;
 
-    bool isManualTransform;
+    bool isManualTransform_;
 };
 
 }

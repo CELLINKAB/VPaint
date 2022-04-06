@@ -965,11 +965,8 @@ void Global::setPasteDelta(double delta)
     pasteDeltaY_ = delta;
 }
 
-const QRectF& Global::selectedGeometry() const
-{
-    return selectedGeometry_;
-}
-
+// Update the selection geometry for display the correct selection size in the Shape parameter bar
+// And emitting signal if selection geometry was changed interactive(when drawing and transforming)
 void Global::updateSelectedGeometry(double x, double y, double w, double h, bool isInteractive)
 {
     selectedGeometry_.setX(x);
@@ -983,11 +980,8 @@ void Global::updateSelectedGeometry(double x, double y, double w, double h, bool
     }
 }
 
-const QPointF& Global::mousePastePosition() const
-{
-    return mousePastePosition_;
-}
-
+// Storing the mouse position on scene for be able to paste in right position
+// Emiting rightMouseClicked() for show copy/paste popup
 void Global::storeMousePastePos()
 {
     mousePastePosition_.setX(xSceneCursorPos_);

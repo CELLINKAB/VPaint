@@ -625,6 +625,7 @@ void GLWidget::delegateMouseMove(QMouseEvent *event)
 
 void GLWidget::mouseReleaseEvent(QMouseEvent *event)
 {
+    // Storing the mouse position on scene for be able to paste in right position
     if (event->button() == Qt::RightButton) {
         global()->storeMousePastePos();
     }

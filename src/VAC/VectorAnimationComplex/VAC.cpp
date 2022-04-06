@@ -277,7 +277,7 @@ void VAC::initNonCopyable()
     signalCounter_ = 0;
     pasteDeltaX_ = 0;
     pasteDeltaY_ = 0;
-    isManualTransform = false;
+    isManualTransform_ = false;
 }
 
 void VAC::initCopyable()
@@ -293,7 +293,7 @@ VAC::VAC() :
     SceneObject(),
     pasteDeltaX_(0),
     pasteDeltaY_(0),
-    isManualTransform(false)
+    isManualTransform_(false)
 {
     initNonCopyable();
     initCopyable();
@@ -879,10 +879,12 @@ void VAC::deselectAll(Time time)
     }
     removeFromSelection(cellsToDeselect,false);
 
-    if (isManualTransform) {
+    // Storing the last transforming for undo/redo when
+    // performed the manual transform(from the shape parameters bar)
+    if (isManualTransform_) {
         emit checkpoint();
     }
-    isManualTransform = false;
+    isManualTransform_ = false;
 }
 
 void VAC::deselectAll()
@@ -891,10 +893,12 @@ void VAC::deselectAll()
         setSelectedCells(CellSet(),false);
     }
 
-    if (isManualTransform) {
+    // Storing the last transforming for undo/redo when
+    // performed the manual transform(from the shape parameters bar)
+    if (isManualTransform_) {
         emit checkpoint();
     }
-    isManualTransform = false;
+    isManualTransform_ = false;
 }
 
 void VAC::invertSelection()
@@ -1043,7 +1047,7 @@ VAC::VAC(QTextStream & in) :
     SceneObject(),
     pasteDeltaX_(0),
     pasteDeltaY_(0),
-    isManualTransform(false)
+    isManualTransform_(false)
 
 {
     clear();
@@ -2011,21 +2015,21 @@ void VAC::calculateSelectedGeometry()
 
 void VAC::setManualWidth(double newWidth)
 {
-    isManualTransform = true;
+    isManualTransform_ = true;
     transformTool_.setManualWidth(newWidth, timeInteractivity_);
     emit changed();
 }
 
 void VAC::setManualHeight(double newHeight)
 {
-    isManualTransform = true;
+    isManualTransform_ = true;
     transformTool_.setManualHeight(newHeight, timeInteractivity_);
     emit changed();
 }
 
 void VAC::setManualRotation(double angle)
 {
-    isManualTransform = true;
+    isManualTransform_ = true;
     transformTool_.setManualRotation(angle, timeInteractivity_);
     emit changed();
 }
@@ -6647,12 +6651,12 @@ void VAC::performDragAndDrop(double x, double y)
     //emit changed();
 }
 
-void VAC::completeDragAndDrop(bool isEmitCheckpoint)
+void VAC::completeDragAndDrop(bool emitCheckpoint)
 {
     transformTool_.endDragAndDrop();
     global()->setDragAndDropping(false);
 
-    if (isEmitCheckpoint) {
+    if (emitCheckpoint) {
         emit checkpoint();
     }
 }

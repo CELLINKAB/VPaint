@@ -157,10 +157,10 @@ public:
     void setPasteDelta(double dx, double dy);
     void setPasteDelta(double delta);
 
-    const QRectF& selectedGeometry() const;
+    inline const QRectF& selectedGeometry() const { return selectedGeometry_; }
     void updateSelectedGeometry(double x, double y, double w, double h, bool isInteractive = false);
 
-    const QPointF& mousePastePosition() const;
+    inline const QPointF& mousePastePosition() const { return mousePastePosition_; }
     void storeMousePastePos();
 
     // Display modes

@@ -738,6 +738,7 @@ void TransformTool::draw(const CellSet & cells, Time time, ViewSettings & viewSe
         glPopMatrix();
     }
 
+    // Update the selection geometry for display the correct selection size when transforming
     if (cells_.count())
     {
         global()->updateSelectedGeometry(obb.xMin(), obb.yMin(), obb.width(), obb.height(), true);
@@ -1116,7 +1117,7 @@ void TransformTool::setManualWidth(double newWidth, Time time)
     {
         double delta = (newWidth - obb.width()) / 2;
 
-        if (abs(delta) > EPS)
+        if (!qFuzzyIsNull(delta))
         {
             hovered_ = LeftScale;
             beginTransform(obb.xMin(), obb.yMid(), time);
@@ -1144,7 +1145,7 @@ void TransformTool::setManualHeight(double newHeight, Time time)
     {
         double delta = (newHeight - obb.height()) / 2;
 
-        if (abs(delta) > EPS)
+        if (!qFuzzyIsNull(delta))
         {
             hovered_ = TopScale;
             beginTransform(obb.xMid(), obb.yMin(), time);

@@ -86,6 +86,7 @@ public:
 
     // Transform selection
     void beginTransform(double x0, double y0, Time time);
+    // Added the angle parameter for the manual rotating
     void continueTransform(double x, double y, double angle = 0.0);
     void endTransform();
 
