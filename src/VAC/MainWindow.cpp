@@ -455,6 +455,7 @@ void MainWindow::redo()
 void MainWindow::cut()
 {
     scene_->cut(clipboard_);
+    scene_->emitShapesUpdated(scene_->activeLayer()->name());
 }
 
 void MainWindow::copy()
@@ -465,6 +466,7 @@ void MainWindow::copy()
 void MainWindow::paste(bool isMousePaste)
 {
     scene_->paste(clipboard_, isMousePaste);
+    scene_->emitShapesUpdated(scene_->activeLayer()->name());
 }
 
 void MainWindow::motionPaste()
