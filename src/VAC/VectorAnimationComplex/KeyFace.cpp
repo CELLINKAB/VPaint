@@ -392,6 +392,28 @@ void KeyFace::setCycles(const QList<Cycle> & cycles)
     addCycles(cycles);
 }
 
+InfillPattern KeyFace::infill() const
+{
+    return infillPattern_;
+}
+
+void KeyFace::setInfillDensity(int density)
+{
+    infillPattern_.setDensity(density);
+    updateInfill();
+}
+
+void KeyFace::setInfillPattern(InfillPattern::Pattern pattern)
+{
+    infillPattern_.setPattern(pattern);
+    updateInfill();
+}
+
+void KeyFace::drawInfill()
+{
+        infillPattern_.draw();
+}
+
 void KeyFace::addCycles(const QList<Cycle> & cycles)
 {
     for(int i=0; i<cycles.size(); ++i)
@@ -531,23 +553,45 @@ CellSet KeyFace::spatialBoundary() const
     return res;
 }
 
+const QList<Cycle> &KeyFace::cycles() const
+{
+    return cycles_;
+}
+
 void KeyFace::updateBoundary_impl(KeyEdge * oldEdge, const KeyEdgeList & newEdges)
 {
     for(int i=0; i<cycles_.size(); ++i)
         cycles_[i].replaceEdges(oldEdge, newEdges);
+    updateInfill();
 }
+
 
 // Update boundary
 void KeyFace::updateBoundary_impl(KeyVertex * oldVertex, KeyVertex * newVertex)
 {
     for(int i=0; i<cycles_.size(); ++i)
         cycles_[i].replaceVertex(oldVertex, newVertex);
+    updateInfill();
 }
 
 void KeyFace::updateBoundary_impl(const KeyHalfedge & oldHalfedge, const KeyHalfedge & newHalfedge)
 {
     for(int i=0; i<cycles_.size(); ++i)
         cycles_[i].replaceHalfedge(oldHalfedge, newHalfedge);
+    updateInfill();
+}
+
+void KeyFace::updateInfill()
+{
+    if (!cycles_.empty()) {
+        QPolygonF polygon{};
+        const auto cycle = cycles_[0];
+        for (const auto keyHalfEdge : cycle.keyHalfEdges()) {
+            polygon << QPointF{keyHalfEdge.startVertex()->pos().x(),
+                               keyHalfEdge.startVertex()->pos().y()};
+        }
+        infillPattern_.update(polygon);
+    }
 }
 
 KeyFace * KeyFace::clone()

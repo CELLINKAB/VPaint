@@ -110,6 +110,8 @@ public:
     // Reversed cycle
     Cycle reversed() const;
 
+    const QList<KeyHalfedge> keyHalfEdges() const;
+
 
 private:
     friend class VAC;
@@ -123,6 +125,7 @@ private:
 
     // sorted list of instant edges
     QList<KeyHalfedge> halfedges_;
+
 };
 
 } // end namespace VectorAnimationComplex

@@ -21,6 +21,7 @@
 #include "Cell.h"
 #include "KeyVertex.h"
 #include "KeyEdge.h"
+#include "KeyFace.h"
 #include "EdgeGeometry.h"
 #include "VAC.h"
 #include "Algorithms.h"
@@ -819,6 +820,7 @@ void TransformTool::beginTransform(double x0, double y0, Time time)
     // Clear cached values
     draggedVertices_.clear();
     draggedEdges_.clear();
+    draggedFaces_.clear();
 
     // Return in trivial cases
     if (hovered() == None || cells_.isEmpty())
@@ -898,6 +900,7 @@ void TransformTool::beginTransform(double x0, double y0, Time time)
         // XXX add the non-loop edges whose end vertices are dragged?
         draggedVertices_ = KeyVertexSet(cellsToTransform);
         draggedEdges_ = KeyEdgeSet(cellsToTransform);
+        draggedFaces_ = KeyFaceSet(cellsToTransform);
 
         // prepare for affine transform
         for(KeyEdge * e: qAsConst(draggedEdges_))
@@ -1072,6 +1075,9 @@ void TransformTool::continueTransform(double x, double y, double angle)
         for(KeyVertex * v: qAsConst(draggedVertices_))
             v->correctEdgesGeometry();
 
+        for (KeyFace* f : qAsConst(draggedFaces_))
+            f->updateInfill();
+
         // Apply transformation to manual pivot point
         if (manualPivot_)
         {
@@ -1090,6 +1096,7 @@ void TransformTool::endTransform()
 
     // Contextual help for users
     desinformGlobalOfTransformations_();
+
 }
 
 void TransformTool::prepareDragAndDrop()

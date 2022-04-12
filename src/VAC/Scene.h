@@ -25,6 +25,7 @@
 #include "ViewSettings.h"
 #include "VAC/vpaint_global.h"
 #include "VAC/VectorAnimationComplex/Cell.h"
+#include "VAC/VectorAnimationComplex/InfillPattern.h"
 
 class Background;
 class View;
@@ -141,8 +142,9 @@ public:
     void setWidth(double w);
     void setHeight(double h);
     void setCanvasDefaultValues();
+    void setInfillDensityForSelectedCells(int density);
+    void setInfillPatternForSelectedCells(InfillPattern::Pattern pattern);
     QList<ShapeType> getActiveLayerShapesType();
-
 public slots:
     // --------- Tools ----------
     void test();
