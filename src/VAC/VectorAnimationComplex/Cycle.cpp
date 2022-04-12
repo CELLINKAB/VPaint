@@ -578,6 +578,11 @@ Cycle Cycle::reversed() const
     return res;
 }
 
+const QList<KeyHalfedge> Cycle::keyHalfEdges() const
+{
+     return halfedges_;
+}
+
 
 
 

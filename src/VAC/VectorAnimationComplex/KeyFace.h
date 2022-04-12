@@ -25,6 +25,7 @@
 #include "Triangles.h"
 
 #include "VAC/vpaint_global.h"
+#include "InfillPattern.h"
 
 namespace VectorAnimationComplex
 {
@@ -65,6 +66,13 @@ public:
     //   - cells of cycles must belong to vac()
     void setCycles(const QList<Cycle> & cycles);
 
+    InfillPattern infill() const;
+
+    void setInfillDensity(int density);
+    void setInfillPattern(InfillPattern::Pattern pattern);
+
+    void drawInfill();
+
     // Drawing
 
     // Get sampling of the boundary
@@ -74,6 +82,10 @@ public:
     CellSet spatialBoundary() const;
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    const QList<Cycle>& cycles() const;
+
+    void updateInfill();
 
 private:
     friend class VAC;
@@ -99,6 +111,8 @@ private:
 
     // Implementation of triangulate
     void triangulate_(Time time, Triangles & out) const;
+
+    InfillPattern infillPattern_{};
 
 // --------- Cloning, Assigning, Copying, Serializing ----------
 

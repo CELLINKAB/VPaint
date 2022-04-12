@@ -546,6 +546,8 @@ void VAC::draw(Time time, ViewSettings & viewSettings)
         // Draw all cells
         for(auto c: zOrdering_)
             c->draw(time, viewSettings);
+        for (auto f : KeyFaceSet(faces()))
+            f->drawInfill();
 
         // Draw sketched edge
         if(sketchedEdge_)
@@ -6618,6 +6620,7 @@ void VAC::prepareDragAndDrop(double x0, double y0, Time time)
 {
     draggedVertices_.clear();
     draggedEdges_.clear();
+    draggedFaces_.clear();
 
     // do nothing if the highlighted object is not a node object
     if(!hoveredCell_)
@@ -6672,6 +6675,7 @@ void VAC::prepareDragAndDrop(double x0, double y0, Time time)
     // todo: add the non-loop edges whose end vertices are dragged
     draggedVertices_ = KeyVertexSet(cellsToDrag);
     draggedEdges_ = KeyEdgeSet(cellsToDrag);
+    draggedFaces_ = KeyFaceSet(cellsToDrag);
 
     // prepare drag and drop
     for(KeyEdge * iedge: qAsConst(draggedEdges_))
@@ -6718,6 +6722,9 @@ void VAC::performDragAndDrop(double x, double y)
 
     for(KeyVertex * v: qAsConst(draggedVertices_))
         v->correctEdgesGeometry();
+
+    for (KeyFace* f : qAsConst(draggedFaces_))
+        f->updateInfill();
 
     transformTool_.performDragAndDrop(dx, dy);
 
@@ -6937,6 +6944,28 @@ bool VAC::checkContains(const Cell * c) const
 {
     int id = c->id();
     return (cells_.contains(id)) && (cells_[id] == c);
+}
+
+void VAC::setInfillDensityForSelectedCells(int density)
+{
+    if(numSelectedCells() == 0)
+        return;
+
+    const auto keyFaces = KeyFaceSet(selectedCells());
+    for (auto keyFace : keyFaces) {
+        keyFace->setInfillDensity(density);
+    }
+}
+
+void VAC::setInfillPatternForSelectedCells(InfillPattern::Pattern pattern)
+{
+    if(numSelectedCells() == 0)
+        return;
+
+    const auto keyFaces = KeyFaceSet(selectedCells());
+    for (auto keyFace : keyFaces) {
+        keyFace->setInfillPattern(pattern);
+    }
 }
 
 void VAC::updateToBePaintedFace(double x, double y, Time time)

@@ -109,6 +109,22 @@ void Scene::setCanvasDefaultValues()
     // Don't emit changed on purpose
 }
 
+void Scene::setInfillDensityForSelectedCells(int density)
+{
+    if(const auto layer = activeLayer())
+    {
+        layer->vac()->setInfillDensityForSelectedCells(density);
+    }
+}
+
+void Scene::setInfillPatternForSelectedCells(InfillPattern::Pattern pattern)
+{
+    if(const auto layer = activeLayer())
+    {
+        layer->vac()->setInfillPatternForSelectedCells(pattern);
+    }
+}
+
 void Scene::copyFrom(Scene * other)
 {
     // XXX We should also copy canvas properties
