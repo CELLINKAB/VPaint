@@ -421,7 +421,6 @@ void MainWindow::goToUndoIndex_(int undoIndex)
 
     // Set scene data from undo history
     scene_->copyFrom(undoStack_[undoIndex].second);
-    scene_->activeVAC()->adjustSelectColorsAll();
 
     // Update window title
     updateWindowTitle_();
@@ -597,11 +596,11 @@ void MainWindow::parseKeyPressEvent(QKeyEvent* event)
     }
     else if (keySequence == QKeySequence(QKeySequence::Delete))
     {
-        scene()->smartDelete();
+        scene()->deleteSelectedCells();
     }
     else if (keySequence == QKeySequence(Qt::CTRL + Qt::Key_Delete))
     {
-        scene()->deleteSelectedCells();
+        scene()->smartDelete();
     }
 
     event->ignore();
@@ -1709,7 +1708,7 @@ void MainWindow::createActions()
     actionShowCanvas = new QAction(tr("Display canvas"), this);
     actionShowCanvas->setStatusTip(tr("Show or hide the canvas borders."));
     actionShowCanvas->setCheckable(true);
-    actionShowCanvas->setChecked(true);
+    actionShowCanvas->setChecked(false);
     //actionShowCanvas->setShortcut(QKeySequence::ZoomOut);
     //actionShowCanvas->setShortcutContext(Qt::ApplicationShortcut);
     connect(actionShowCanvas, SIGNAL(triggered(bool)), this, SLOT(toggleShowCanvas(bool)));

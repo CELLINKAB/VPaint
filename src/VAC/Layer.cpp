@@ -31,13 +31,15 @@ void Layer::init_(
         VectorAnimationComplex::VAC * vac,
         const QString & layerName,
         bool isVisible,
-        qreal layerHeight)
+        qreal layerHeight,
+        double opacity)
 {
     background_ = background;
     vac_ = vac;
     name_ = layerName;
     isVisible_ = isVisible;
     layerHeight_ = layerHeight;
+    background_->setOpacity(opacity);
     connect(background_, SIGNAL(changed()), this, SIGNAL(changed()));
     connect(background_, SIGNAL(checkpoint()), this, SIGNAL(checkpoint()));
 
@@ -91,7 +93,8 @@ Layer * Layer::clone()
                vac_->clone(),
                name_,
                isVisible_,
-               layerHeight_);
+               layerHeight_,
+               background()->opacity());
 
     return res;
 }
@@ -263,21 +266,6 @@ void Layer::setLayerHeight(qreal height)
         emit needUpdatePicking();
         emit layerAttributesChanged();
     }
-}
-
-// Needed for the undo function to work properly,
-// because we use the background for show the surface now.
-// In the future planned to draw the surface on OpenGL and this can be removed
-Layer* Layer::cloneWithBackground()
-{
-    Layer * res = new Layer(NoInit_());
-    res->init_(new Background(*background(), res),
-               vac_->clone(),
-               name_,
-               isVisible_,
-               layerHeight_);
-
-    return res;
 }
 
 void Layer::exportSVG_(Time t, QTextStream & out)

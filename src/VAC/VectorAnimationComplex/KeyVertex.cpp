@@ -191,7 +191,12 @@ KeyVertex::KeyVertex(KeyVertex * other):
     KeyCell(other),
     VertexCell(other)
 {
-    initColor();
+    for (auto i = 0; i < 4; i++)
+    {
+        color_[i] = other->color_[i];
+        colorHighlighted_[i] = other->colorHighlighted_[i];
+        colorSelected_[i] = other->colorSelected_[i];
+    }
 
     pos_ = other->pos_;
     size_ = other->size_;

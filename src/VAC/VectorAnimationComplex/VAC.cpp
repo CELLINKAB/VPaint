@@ -278,6 +278,12 @@ void VAC::initNonCopyable()
     pasteDeltaX_ = 0;
     pasteDeltaY_ = 0;
     isManualTransform_ = false;
+    checkPointTimer = new QTimer(this);
+    checkPointTimer->setSingleShot(true);
+    connect(checkPointTimer, &QTimer::timeout, this, [this]() {
+        emit changed();
+        emit checkpoint();
+    });
 }
 
 void VAC::initCopyable()
@@ -286,6 +292,7 @@ void VAC::initCopyable()
     ds_ = 5.0;
     cells_.clear();
     zOrdering_.clear();
+    lastShapeID_ = 0;
 }
 
 
@@ -293,7 +300,9 @@ VAC::VAC() :
     SceneObject(),
     pasteDeltaX_(0),
     pasteDeltaY_(0),
-    isManualTransform_(false)
+    isManualTransform_(false),
+    lastShapeID_(0),
+    checkPointTimer(nullptr)
 {
     initNonCopyable();
     initCopyable();
@@ -301,6 +310,11 @@ VAC::VAC() :
 
 VAC::~VAC()
 {
+    if (checkPointTimer != nullptr)
+    {
+        delete checkPointTimer;
+        checkPointTimer = nullptr;
+    }
     deleteAllCells();
 }
 
@@ -320,6 +334,7 @@ VAC * VAC::clone()
 
     // Copy sampling precision
     newVAC->ds_ = ds_;
+    newVAC->lastShapeID_ = lastShapeID_;
 
     // Copy cells
     for(Cell * cell: qAsConst(cells_))
@@ -356,18 +371,25 @@ QMap<int,int> VAC::import(VAC * other, bool selectImportedCells, bool isMousePas
     if (!ordering.isEmpty())
     {
         // Take ownership of all cells
+        updateLastShapeID();
         beginAggregateSignals_();
         BoundingBox boundingBox;
+        auto currentShapeID = ordering.first()->shapeID();
         for (Cell* cell: qAsConst(ordering))
         {
             int oldID = cell->id();
             copyOfOther->removeCell_(cell);
             insertCellLast_(cell);
-            if(selectImportedCells)
+            lastShapeID_ = cell->shapeID() == currentShapeID ? lastShapeID_ : lastShapeID_ + 1;
+            currentShapeID = cell->shapeID();
+            cell->setShapeID(lastShapeID_);
+            if(selectImportedCells) {
                 addToSelection(cell, true);
+            }
             res[oldID] = cell->id();
             boundingBox.unite(cell->outlineBoundingBox(timeInteractivity_));
         }
+        lastShapeID_++;
 
         setHoveredCell(ordering.at(0));
         prepareDragAndDrop(boundingBox.xMin(), boundingBox.yMin(), timeInteractivity_);
@@ -978,6 +1000,9 @@ void VAC::read(XmlStreamReader & xml)
                 setMaxID_(id);
             cells_.insert(id, cell);
             zOrdering_.insertLast(cell);
+            if (cell->shapeID() > lastShapeID_) {
+                lastShapeID_ = cell->shapeID();
+            }
         }
     }
 
@@ -1047,7 +1072,8 @@ VAC::VAC(QTextStream & in) :
     SceneObject(),
     pasteDeltaX_(0),
     pasteDeltaY_(0),
-    isManualTransform_(false)
+    isManualTransform_(false),
+    lastShapeID_(0)
 
 {
     clear();
@@ -1066,6 +1092,9 @@ VAC::VAC(QTextStream & in) :
             setMaxID_(id);
         cells_.insert(id, cell);
         zOrdering_.insertLast(cell);
+        if (cell->shapeID() > lastShapeID_) {
+            lastShapeID_ = cell->shapeID();
+        }
         Read::skipBracket(in); // }
     }
     // last read string == ]
@@ -1352,6 +1381,7 @@ QList<ShapeType> VAC::getSelectedShapeType()
     }
     return types;
 }
+
 ShapeType VAC::shapeType(const CellSet & cells)
 {
     KeyFaceSet keyVertices = cells;
@@ -1557,6 +1587,17 @@ void VAC::setMaxID_(int maxID)
 {
     maxID_ = maxID;
     transformTool_.setIdOffset(maxID_+1);
+}
+
+void VAC::updateLastShapeID()
+{
+    for (auto cell : cells_)
+    {
+        if (cell->shapeID() > lastShapeID_)
+        {
+            lastShapeID_ = cell->shapeID();
+        }
+    }
 }
 
 KeyVertex* VAC::newKeyVertex(Time time, const Eigen::Vector2d & pos)
@@ -1787,7 +1828,7 @@ void VAC::continueSketchEdge(double x, double y, double w)
     }
 }
 
-void VAC::endSketchEdge()
+void VAC::endSketchEdge(bool emitCheckpoint)
 {
     if(sketchedEdge_)
     {
@@ -1815,9 +1856,11 @@ void VAC::endSketchEdge()
         delete sketchedEdge_;
         sketchedEdge_ = 0;
 
-
         //emit changed();
-        emit checkpoint();
+        if (emitCheckpoint)
+        {
+            emit checkpoint();
+        }
     }
 }
 
@@ -1907,39 +1950,59 @@ void VAC::endCutFace(KeyVertex * endVertex)
 
 void VAC::changeEdgesColor()
 {
-    bool isChanged = false;
+    auto emitCheckpoint = false;
+    auto edgeColor = global()->edgeColor();
     for(auto cell : selectedCells())
     {
-        auto face = cell->toKeyFace();
-        if(face == nullptr)
+        if (cell->isIgnored())
         {
-            isChanged = true;
-            cell->setColor(global()->edgeColor());
-            adjustSelectColors(cell);
+            auto ignoredColor = global()->edgeColor();
+            ignoredColor.setAlpha(cell->color().alpha());
+            emitCheckpoint = emitCheckpoint ? true : ignoredColor != cell->color();
+            cell->setColor(ignoredColor);
+            cell->setHighlightedColor(ignoredColor);
+            cell->setSelectedColor(ignoredColor);
+        }
+        else if (auto keyEdge = cell->toKeyEdge())
+        {
+            emitCheckpoint = emitCheckpoint ? true : edgeColor != keyEdge->color();
+            keyEdge->setColor(edgeColor);
+            adjusSelectedAndHighlighted(keyEdge);
+        }
+        else if (auto keyVertex = cell->toKeyVertex())
+        {
+            if (!global()->isShowVerticesOnSelection())
+            {
+                emitCheckpoint = emitCheckpoint ? true : edgeColor != keyVertex->color();
+                keyVertex->setColor(edgeColor);
+                adjusSelectedAndHighlighted(keyVertex);
+            }
         }
     }
-    if (isChanged)
+
+    if (emitCheckpoint)
     {
-        emit changed();
-        emit checkpoint();
+        checkPointTimer->start(5);
     }
 }
 
 void VAC::changeFacesColor()
 {
-    bool isChanged = false;
+    auto emitCheckpoint = false;
+    auto faceColor = global()->faceColor();
     for(auto cell : selectedCells())
     {
-        auto face = cell->toKeyFace();
-        if(face != nullptr)
+        if (auto keyFace = cell->toKeyFace())
         {
-            isChanged = true;
-            face->setColor(global()->faceColor());
-            adjustSelectColors(face);
+            emitCheckpoint = emitCheckpoint ? true : faceColor != keyFace->color();
+            keyFace->setColor(faceColor);
+            adjusSelectedAndHighlighted(keyFace);
         }
     }
-    if (isChanged)
+
+    if (emitCheckpoint)
     {
+        checkPointTimer->stop();
         emit changed();
         emit checkpoint();
     }
@@ -1947,7 +2010,7 @@ void VAC::changeFacesColor()
 
 void VAC::adjusSelectedAndHighlighted(Cell* cell)
 {
-    if (cell != nullptr)
+    if (cell != nullptr && !cell->isIgnored())
     {
         cell->adjustHighlightedColor(global()->highlightColorRatio(), global()->highlightAlphaRatio());
         cell->adjustSelectedColor(global()->selectColorRatio(), global()->selectAlphaRatio());
@@ -1956,49 +2019,29 @@ void VAC::adjusSelectedAndHighlighted(Cell* cell)
 
 void VAC::adjustSelectColors(Cell* cell)
 {
-    if (cell == nullptr)
+    if (cell == nullptr || cell->isIgnored())
         return;
 
-    KeyVertex* keyVertex = cell->toKeyVertex();
-    KeyFace* keyFace = cell->toKeyFace();
+    const QColor edgeColor = global()->edgeColor();
+    const QColor faceColor = global()->faceColor();
 
-    const QColor& edgeColor = global()->edgeColor();
-    const QColor& faceColor = global()->faceColor();
+    auto colorChanged = false;
+    auto keyVertex = cell->toKeyVertex();
+    auto keyFace = cell->toKeyFace();
 
-    if (keyVertex != nullptr)
-    {
-        if (!global()->isShowVerticesOnSelection())
-        {
+    if (keyVertex != nullptr) {
+        if (!global()->isShowVerticesOnSelection()) {
+            colorChanged = keyVertex->color() != edgeColor;
             keyVertex->setColor(edgeColor);
-            adjusSelectedAndHighlighted(keyVertex);
-        }
+        } else { return; }
+    } else if (keyFace != nullptr) {
+        colorChanged = colorChanged ? colorChanged : keyFace->color() != faceColor;
+        keyFace->setColor(faceColor);
+    } else {
+        colorChanged = colorChanged ? colorChanged : cell->color() != edgeColor;
+        cell->setColor(edgeColor);
     }
-    else
-    {
-        cell->setColor(keyFace == nullptr ? edgeColor : faceColor);
-        adjusSelectedAndHighlighted(cell);
-    }
-}
-
-void VAC::adjustSelectColorsAll()
-{
-    for (auto cell : cells())
-    {
-        KeyEdge* keyEdge = cell->toKeyEdge();
-        if (keyEdge != nullptr)
-        {
-            adjusSelectedAndHighlighted(keyEdge);
-            KeyVertex* keyVertexStart = keyEdge->startVertex();
-            KeyVertex* keyVertexEnd = keyEdge->endVertex();
-            keyVertexStart->setColor(keyEdge->color());
-            keyVertexEnd->setColor(keyEdge->color());
-            if (!global()->isShowVerticesOnSelection())
-            {
-                adjusSelectedAndHighlighted(keyVertexStart);
-                adjusSelectedAndHighlighted(keyVertexEnd);
-            }
-        }
-    }
+    adjusSelectedAndHighlighted(cell);
 }
 
 void VAC::calculateSelectedGeometry()
@@ -2032,6 +2075,16 @@ void VAC::setManualRotation(double angle)
     isManualTransform_ = true;
     transformTool_.setManualRotation(angle, timeInteractivity_);
     emit changed();
+}
+
+void VAC::assignShapeID(Cell* cell)
+{
+    cell->setShapeID(lastShapeID_);
+}
+
+void VAC::endDrawShape()
+{
+    lastShapeID_ ++;
 }
 
 bool VAC::cutFace_(KeyFace * face, KeyEdge * edge, CutFaceFeedback * feedback)
@@ -5463,7 +5516,7 @@ QList<Cycle> VAC::createFace_computeCycles()
     return cycles;
 }
 
-void VAC::createFace()
+void VAC::createFace(bool emitCheckpoint)
 {
     // Compute cycles
     QList<Cycle> cycles = createFace_computeCycles();
@@ -5480,7 +5533,10 @@ void VAC::createFace()
 
         emit needUpdatePicking();
         emit changed();
-        emit checkpoint();
+        if (emitCheckpoint)
+        {
+            emit checkpoint();
+        }
     }
 }
 
@@ -6064,6 +6120,21 @@ void VAC::hoveveredConnected(bool emitSignal)
     }
 }
 
+void VAC::hoveverShape(bool emitSignal)
+{
+    if (hoveredCell_)
+    {
+        auto shapeID = hoveredCell_->shapeID();
+        for (auto cell : cells_)
+        {
+            if (cell != hoveredCell_ && cell->shapeID() == shapeID)
+            {
+                addToHovered(cell, emitSignal);
+            }
+        }
+    }
+}
+
 void VAC::setNoHoveredCell()
 {
     setNoHoveredAllCells();
@@ -6610,12 +6681,14 @@ void VAC::prepareDragAndDrop(double x0, double y0, Time time)
 
     x0_ = x0;
     y0_ = y0;
+    global()->calculateSnappedPosition(x0_, y0_);
 }
 
 void VAC::performDragAndDrop(double x, double y)
 {
-    double dx = x-x0_;
-    double dy = y-y0_;
+    auto pos = global()->getSnappedPosition(x, y);
+    double dx = pos.x() - x0_;
+    double dy = pos.y() - y0_;
 
     // Constrain along 45 degree axes
     if (global()->keyboardModifiers().testFlag(Qt::ShiftModifier))

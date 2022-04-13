@@ -157,7 +157,6 @@ void InbetweenVertex::remapPointers(VAC * newVAC)
     afterVertex_ = newVAC->getCell(afterVertex_->id())->toKeyVertex();
 }
 
-
 InbetweenVertex::InbetweenVertex(InbetweenVertex * other):
     Cell(other),
     InbetweenCell(other),
@@ -166,6 +165,12 @@ InbetweenVertex::InbetweenVertex(InbetweenVertex * other):
     beforeVertex_(other->beforeVertex_),
     afterVertex_(other->afterVertex_)
 {
+    for (auto i = 0; i < 4; i++)
+    {
+        color_[i] = other->color_[i];
+        colorHighlighted_[i] = other->colorHighlighted_[i];
+        colorSelected_[i] = other->colorSelected_[i];
+    }
 }
 
 KeyCellSet InbetweenVertex::beforeCells() const

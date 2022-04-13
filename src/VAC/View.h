@@ -199,10 +199,10 @@ private:
     double sculptStartX_;
     double sculptStartY_;
 
-    double shapeStartX;
-    double shapeStartY;
+    double shapeStartX_;
+    double shapeStartY_;
 
-    VectorAnimationComplex::CellSet lastDrawnCells;
+    VectorAnimationComplex::CellSet lastDrawnCells_;
 
     // Dirty implementation:
     VectorAnimationComplex::VAC * vac_;
@@ -233,7 +233,7 @@ private:
     void drawTriangle(double x, double y, ShapeDrawPhase drawPhase);
     void drawRectangle(double x, double y, ShapeDrawPhase drawPhase);
     void drawPolygon(double x, double y, int countAngles, double rotation, ShapeDrawPhase drawPhase);
-    void drawShape(double x, double y, ShapeType shapeType, int countAngles = 1, double rotation = 0, bool drawingCircle = false);
+    void drawShape(double x, double y, ShapeType shapeType, int countAngles = 1, double initialRotation = 0, bool drawingCircle = false);
     void updateView();
 };
 

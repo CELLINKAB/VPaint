@@ -25,6 +25,7 @@
 #include "VAC.h"
 #include "Algorithms.h"
 #include "../Global.h"
+#include "../View.h"
 
 #include <cmath>
 #include <vector>
@@ -935,9 +936,9 @@ namespace
 
 double scaleFactor_(double x, double x0, double xPivot, double dx)
 {
-    if (std::abs(x0-dx-xPivot) > EPS)
+    if (std::abs(x0 - dx - xPivot) > EPS)
     {
-        return (x-dx-xPivot) / (x0-dx-xPivot);
+        return (x - xPivot) / (x0 - dx - xPivot);
     }
     else
     {
@@ -952,6 +953,7 @@ void TransformTool::continueTransform(double x, double y, double angle)
     // Cache mouse position
     x_ = x;
     y_ = y;
+
 
     // Return in trivial cases
     if (hovered() == None || cells_.isEmpty())
@@ -978,10 +980,13 @@ void TransformTool::continueTransform(double x, double y, double angle)
             else if (std::abs(yManualPivot_-obb0_.yMax()) < ySnap) yManualPivot_ = obb0_.yMax();
         }
     }
-
     // Transform selection
     else
     {
+        auto xSnapp = x;
+        auto ySnapp = y;
+        global()->calculateSnappedPosition(xSnapp, ySnapp);
+
         // Get pivot
         const Vec2 pivotPos = cachedTransformPivotPosition_();
         const double xPivot = pivotPos[0];
@@ -994,24 +999,24 @@ void TransformTool::continueTransform(double x, double y, double angle)
             hovered() == BottomRightScale ||
             hovered() == BottomLeftScale)
         {
-            double sx = scaleFactor_(x, x0_, dx_, xPivot);
-            double sy = scaleFactor_(y, y0_, dy_, yPivot);
+            double sx = scaleFactor_(xSnapp, x0_, xPivot, dx_);
+            double sy = scaleFactor_(ySnapp, y0_, yPivot, dy_);
             if (isTransformConstrained_())
             {
-                sx = 0.5*(sx+sy);
-                sy = sx;
+                sx = sx > sy ? sx : sy;
+                sy = sy > sx ? sy : sx;
             }
             xf = Eigen::Scaling(sx, sy);
         }
         else if (hovered() == TopScale ||
                  hovered() == BottomScale)
         {
-            xf = Eigen::Scaling(1.0, scaleFactor_(y, y0_, dy_, yPivot));
+            xf = Eigen::Scaling(1.0, scaleFactor_(ySnapp, y0_, yPivot, dy_));
         }
         else if (hovered() == RightScale ||
                  hovered() == LeftScale)
         {
-            xf = Eigen::Scaling(scaleFactor_(x, x0_, dx_, xPivot), 1.0);
+            xf = Eigen::Scaling(scaleFactor_(xSnapp, x0_, xPivot, dx_), 1.0);
         }
         else if (hovered() == TopLeftRotate ||
                  hovered() == TopRightRotate ||
@@ -1115,7 +1120,7 @@ void TransformTool::setManualWidth(double newWidth, Time time)
 
     if (obb.isProper())
     {
-        double delta = (newWidth - obb.width()) / 2;
+        auto delta = (newWidth - obb.width()) / 2;
 
         if (!qFuzzyIsNull(delta))
         {
@@ -1143,7 +1148,7 @@ void TransformTool::setManualHeight(double newHeight, Time time)
 
     if (obb.isProper())
     {
-        double delta = (newHeight - obb.height()) / 2;
+        auto delta = (newHeight - obb.height()) / 2;
 
         if (!qFuzzyIsNull(delta))
         {

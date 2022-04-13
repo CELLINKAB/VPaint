@@ -20,6 +20,7 @@
 #include <QSet>
 #include <QMap>
 #include <QColor>
+#include <QTimer>
 
 #include "../SceneObject.h"
 
@@ -109,6 +110,7 @@ public:
     // Modify highligthed and seleted state
     void setHoveredCell(Cell * cell);
     void hoveveredConnected(bool emitSignal = false);
+    void hoveverShape(bool emitSignal = false);
     void setNoHoveredCell();
     void addToHovered(Cell * cell, bool emitSignal = false);
     void addToHovered(const CellSet & cells, bool emitSignal = false);
@@ -180,7 +182,7 @@ public:
     // -- Sketch --
     void beginSketchEdge(double x, double y, double w, Time time);
     void continueSketchEdge(double x, double y, double w);
-    void endSketchEdge();
+    void endSketchEdge(bool emitCheckpoint = true);
 
     // -- Sculpt --
     void updateSculpt(double x, double y, Time time);
@@ -207,13 +209,15 @@ public:
     void changeFacesColor();
     void adjusSelectedAndHighlighted(Cell* cell);
     void adjustSelectColors(Cell* cell);
-    void adjustSelectColorsAll();
 
     void calculateSelectedGeometry();
 
     void setManualWidth(double newWidth);
     void setManualHeight(double newHeight);
     void setManualRotation(double angle);
+
+    void assignShapeID(Cell* cell);
+    void endDrawShape();
 
     /////////////////////////////////////////////////////////////////
     //                 MOUSE CLIC ACTIONS                          //
@@ -268,7 +272,7 @@ public slots:
     void test();
     void deleteSelectedCells();
     void smartDelete();
-    void createFace();
+    void createFace(bool emitCheckpoint = true);
     void addCyclesToFace();
     void removeCyclesFromFace();
     void changeColor();
@@ -368,6 +372,7 @@ private:
     int getAvailableID();
     void deleteAllCells();
     void setMaxID_(int maxID);
+    void updateLastShapeID();
     int maxID_;
 
     // User interactivity
@@ -491,6 +496,9 @@ private:
     double pasteDeltaY_;
 
     bool isManualTransform_;
+
+    int lastShapeID_;
+    QTimer* checkPointTimer;
 };
 
 }

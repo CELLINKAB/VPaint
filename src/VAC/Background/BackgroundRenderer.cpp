@@ -17,6 +17,7 @@
 #include "BackgroundRenderer.h"
 
 #include "Background.h"
+#include "../Global.h"
 
 #include <QOpenGLContext>
 #include <QOpenGLTexture>
@@ -76,6 +77,54 @@ void BackgroundRenderer::onBackgroundDestroyed_()
     Background * b = background_;
     background_ = nullptr;
     emit backgroundDestroyed(b);
+}
+
+void BackgroundRenderer::drawSurface(bool rounded)
+{
+    // Draw background
+    glColor4d(global()->surfaceBackGroundColor().redF(),
+              global()->surfaceBackGroundColor().greenF(),
+              global()->surfaceBackGroundColor().blueF(),
+              background_->opacity());
+
+    glBegin(rounded ? GL_TRIANGLE_FAN : GL_QUADS);
+    for (auto pos : global()->surfaceVertices())
+    {
+        glVertex2d(pos.x(), pos.y());
+    }
+    glEnd();
+
+    // Draw border
+    glColor4d(global()->surfaceBorderColor().redF(),
+              global()->surfaceBorderColor().greenF(),
+              global()->surfaceBorderColor().blueF(),
+              background_->opacity());
+
+    glBegin(GL_LINE_LOOP);
+    for (auto pos : global()->surfaceVertices())
+    {
+        glVertex2d(pos.x(), pos.y());
+    }
+    glEnd();
+
+    // Draw grid
+    if (global()->isShowGrid())
+    {
+        glColor4d(global()->gridColor().redF(),
+                  global()->gridColor().greenF(),
+                  global()->gridColor().blueF(),
+                  background_->opacity());
+
+        glBegin(GL_LINES);
+        for (auto pair : global()->gridLines())
+        {
+            auto pos1 = pair.first;
+            auto pos2 = pair.second;
+            glVertex2f(pos1.x(), pos1.y());
+            glVertex2f(pos2.x(), pos2.y());
+        }
+        glEnd();
+    }
 }
 
 QOpenGLTexture * BackgroundRenderer::texture_(int frame)

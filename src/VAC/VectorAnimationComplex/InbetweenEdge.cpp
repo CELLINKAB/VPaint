@@ -301,6 +301,13 @@ InbetweenEdge::InbetweenEdge(VAC * vac, XmlStreamReader & xml) :
         InbetweenCell(other),
         EdgeCell(other)
     {
+        for (auto i = 0; i < 4; i++)
+        {
+            color_[i] = other->color_[i];
+            colorHighlighted_[i] = other->colorHighlighted_[i];
+            colorSelected_[i] = other->colorSelected_[i];
+        }
+
         beforePath_ = other->beforePath_;
         afterPath_ = other->afterPath_;
 
