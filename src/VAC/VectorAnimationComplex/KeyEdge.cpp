@@ -225,6 +225,13 @@ KeyEdge::KeyEdge(KeyEdge * other) :
     KeyCell(other),
     EdgeCell(other)
 {
+    for (auto i = 0; i < 4; i++)
+    {
+        color_[i] = other->color_[i];
+        colorHighlighted_[i] = other->colorHighlighted_[i];
+        colorSelected_[i] = other->colorSelected_[i];
+    }
+
     startVertex_ = other->startVertex_;
     endVertex_ = other->endVertex_;
     geometry_ = other->geometry_->clone();

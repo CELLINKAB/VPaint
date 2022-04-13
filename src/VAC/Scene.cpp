@@ -121,7 +121,7 @@ void Scene::copyFrom(Scene * other)
 
     // Copy layers
     for(Layer * layer: qAsConst(other->layers_))
-        addLayer_(layer->cloneWithBackground(), true);
+        addLayer_(layer->clone(), true);
     activeLayerIndex_ = other->activeLayerIndex_;
 
     // Reset hovered
@@ -902,7 +902,7 @@ void Scene::moveActiveLayerDown()
 void Scene::destroyActiveLayer()
 {
     int i = activeLayerIndex_;
-    if(0 <= i && i < numLayers())
+    if(1 <= i && i < numLayers())
     {
         deselectAll();
 
@@ -975,7 +975,6 @@ void Scene::paste(VectorAnimationComplex::VAC* & clipboard, bool isMousePaste)
     if(layer)
     {
         layer->vac()->paste(clipboard, isMousePaste);
-        layer->vac()->adjustSelectColorsAll();
     }
 }
 

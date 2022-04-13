@@ -278,6 +278,12 @@ void VAC::initNonCopyable()
     pasteDeltaX_ = 0;
     pasteDeltaY_ = 0;
     isManualTransform_ = false;
+    checkPointTimer = new QTimer(this);
+    checkPointTimer->setSingleShot(true);
+    connect(checkPointTimer, &QTimer::timeout, this, [this]() {
+        emit changed();
+        emit checkpoint();
+    });
 }
 
 void VAC::initCopyable()
@@ -295,7 +301,8 @@ VAC::VAC() :
     pasteDeltaX_(0),
     pasteDeltaY_(0),
     isManualTransform_(false),
-    lastShapeID_(0)
+    lastShapeID_(0),
+    checkPointTimer(nullptr)
 {
     initNonCopyable();
     initCopyable();
@@ -303,6 +310,11 @@ VAC::VAC() :
 
 VAC::~VAC()
 {
+    if (checkPointTimer != nullptr)
+    {
+        delete checkPointTimer;
+        checkPointTimer = nullptr;
+    }
     deleteAllCells();
 }
 
@@ -1936,23 +1948,61 @@ void VAC::endCutFace(KeyVertex * endVertex)
     }
 }
 
-void VAC::changeSelectedColor()
+void VAC::changeEdgesColor()
 {
-    auto colorChanged = false;
+    auto emitCheckpoint = false;
+    auto edgeColor = global()->edgeColor();
     for(auto cell : selectedCells())
     {
-        if (cell->isIgnored()) {
-            QColor edgeColor = global()->edgeColor();
-            edgeColor.setAlpha(cell->color().alpha());
-            cell->setColor(edgeColor);
-            cell->setHighlightedColor(edgeColor);
-            cell->setSelectedColor(edgeColor);
-        } else {
-            colorChanged = adjustSelectColors(cell);
+        if (cell->isIgnored())
+        {
+            auto ignoredColor = global()->edgeColor();
+            ignoredColor.setAlpha(cell->color().alpha());
+            emitCheckpoint = emitCheckpoint ? true : ignoredColor != cell->color();
+            cell->setColor(ignoredColor);
+            cell->setHighlightedColor(ignoredColor);
+            cell->setSelectedColor(ignoredColor);
+        }
+        else if (auto keyEdge = cell->toKeyEdge())
+        {
+            emitCheckpoint = emitCheckpoint ? true : edgeColor != keyEdge->color();
+            keyEdge->setColor(edgeColor);
+            adjusSelectedAndHighlighted(keyEdge);
+        }
+        else if (auto keyVertex = cell->toKeyVertex())
+        {
+            if (!global()->isShowVerticesOnSelection())
+            {
+                emitCheckpoint = emitCheckpoint ? true : edgeColor != keyVertex->color();
+                keyVertex->setColor(edgeColor);
+                adjusSelectedAndHighlighted(keyVertex);
+            }
         }
     }
 
-    if (colorChanged) {
+    if (emitCheckpoint)
+    {
+        checkPointTimer->start(5);
+    }
+}
+
+void VAC::changeFacesColor()
+{
+    auto emitCheckpoint = false;
+    auto faceColor = global()->faceColor();
+    for(auto cell : selectedCells())
+    {
+        if (auto keyFace = cell->toKeyFace())
+        {
+            emitCheckpoint = emitCheckpoint ? true : faceColor != keyFace->color();
+            keyFace->setColor(faceColor);
+            adjusSelectedAndHighlighted(keyFace);
+        }
+    }
+
+    if (emitCheckpoint)
+    {
+        checkPointTimer->stop();
         emit changed();
         emit checkpoint();
     }
@@ -1967,13 +2017,13 @@ void VAC::adjusSelectedAndHighlighted(Cell* cell)
     }
 }
 
-bool VAC::adjustSelectColors(Cell* cell)
+void VAC::adjustSelectColors(Cell* cell)
 {
     if (cell == nullptr || cell->isIgnored())
-        return false;
+        return;
 
-    const QColor& edgeColor = global()->edgeColor();
-    const QColor& faceColor = global()->faceColor();
+    const QColor edgeColor = global()->edgeColor();
+    const QColor faceColor = global()->faceColor();
 
     auto colorChanged = false;
     auto keyVertex = cell->toKeyVertex();
@@ -1983,7 +2033,7 @@ bool VAC::adjustSelectColors(Cell* cell)
         if (!global()->isShowVerticesOnSelection()) {
             colorChanged = keyVertex->color() != edgeColor;
             keyVertex->setColor(edgeColor);
-        } else { return colorChanged; }
+        } else { return; }
     } else if (keyFace != nullptr) {
         colorChanged = colorChanged ? colorChanged : keyFace->color() != faceColor;
         keyFace->setColor(faceColor);
@@ -1992,31 +2042,6 @@ bool VAC::adjustSelectColors(Cell* cell)
         cell->setColor(edgeColor);
     }
     adjusSelectedAndHighlighted(cell);
-    return colorChanged;
-}
-
-void VAC::adjustSelectColorsAll()
-{
-    for (auto cell : cells())
-    {
-        KeyEdge* keyEdge = cell->toKeyEdge();
-        if (keyEdge != nullptr && !keyEdge->isIgnored())
-        {
-            adjusSelectedAndHighlighted(keyEdge);
-            KeyVertex* keyVertexStart = keyEdge->startVertex();
-            KeyVertex* keyVertexEnd = keyEdge->endVertex();
-            if (keyVertexStart != nullptr && keyVertexEnd != nullptr)
-            {
-                keyVertexStart->setColor(keyEdge->color());
-                keyVertexEnd->setColor(keyEdge->color());
-                if (!global()->isShowVerticesOnSelection())
-                {
-                    adjusSelectedAndHighlighted(keyVertexStart);
-                    adjusSelectedAndHighlighted(keyVertexEnd);
-                }
-            }
-        }
-    }
 }
 
 void VAC::calculateSelectedGeometry()

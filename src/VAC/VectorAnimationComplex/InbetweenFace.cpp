@@ -715,6 +715,13 @@ InbetweenFace::InbetweenFace(InbetweenFace * other):
     InbetweenCell(other),
     FaceCell(other)
 {
+    for (auto i = 0; i < 4; i++)
+    {
+        color_[i] = other->color_[i];
+        colorHighlighted_[i] = other->colorHighlighted_[i];
+        colorSelected_[i] = other->colorSelected_[i];
+    }
+
     cycles_ = other->cycles_;
     beforeFaces_ = other->beforeFaces_;
     afterFaces_ = other->afterFaces_;

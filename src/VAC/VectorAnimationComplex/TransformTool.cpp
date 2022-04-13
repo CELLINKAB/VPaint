@@ -1124,14 +1124,10 @@ void TransformTool::setManualWidth(double newWidth, Time time)
 
         if (!qFuzzyIsNull(delta))
         {
-            if (global()->isGridSnapping() && delta < global()->gridSize()) {
-                delta *= 2;
-            } else {
-                hovered_ = LeftScale;
-                beginTransform(obb.xMin(), obb.yMid(), time);
-                continueTransform(obb.xMin() - delta, obb.yMid());
-                endTransform();
-            }
+            hovered_ = LeftScale;
+            beginTransform(obb.xMin(), obb.yMid(), time);
+            continueTransform(obb.xMin() - delta, obb.yMid());
+            endTransform();
 
             hovered_ = RightScale;
             beginTransform(obb.xMax(), obb.yMid(), time);
@@ -1156,14 +1152,10 @@ void TransformTool::setManualHeight(double newHeight, Time time)
 
         if (!qFuzzyIsNull(delta))
         {
-            if (global()->isGridSnapping() && delta < global()->gridSize()) {
-                delta *= 2;
-            } else {
-                hovered_ = TopScale;
-                beginTransform(obb.xMid(), obb.yMin(), time);
-                continueTransform(obb.xMid(), obb.yMin() - delta);
-                endTransform();
-            }
+            hovered_ = TopScale;
+            beginTransform(obb.xMid(), obb.yMin(), time);
+            continueTransform(obb.xMid(), obb.yMin() - delta);
+            endTransform();
 
             hovered_ = BottomScale;
             beginTransform(obb.xMid(), obb.yMax(), time);

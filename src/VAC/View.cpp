@@ -110,8 +110,8 @@ View::View(VPaint::Scene * scene, QWidget * parent) :
 
     connect(global(), SIGNAL(keyboardModifiersChanged()), this, SLOT(handleNewKeyboardModifiers()));
 
-    connect(global(), &Global::edgeColorChanged, this, [this]() { if(vac_) { vac_->changeSelectedColor(); }});
-    connect(global(), &Global::faceColorChanged, this, [this]() { if(vac_) { vac_->changeSelectedColor(); }});
+    connect(global(), &Global::edgeColorChanged, this, [this]() { if(vac_) { vac_->changeEdgesColor(); }});
+    connect(global(), &Global::faceColorChanged, this, [this]() { if(vac_) { vac_->changeFacesColor(); }});
 }
 
 View::~View()

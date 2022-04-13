@@ -570,6 +570,13 @@ KeyFace::KeyFace(KeyFace * other) :
     KeyCell(other),
     FaceCell(other)
 {
+    for (auto i = 0; i < 4; i++)
+    {
+        color_[i] = other->color_[i];
+        colorHighlighted_[i] = other->colorHighlighted_[i];
+        colorSelected_[i] = other->colorSelected_[i];
+    }
+
     cycles_ = other->cycles_;
 }
 

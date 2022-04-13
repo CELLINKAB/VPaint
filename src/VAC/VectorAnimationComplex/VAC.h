@@ -20,6 +20,7 @@
 #include <QSet>
 #include <QMap>
 #include <QColor>
+#include <QTimer>
 
 #include "../SceneObject.h"
 
@@ -204,10 +205,10 @@ public:
     void endCutFace(KeyVertex * endVertex);
 
     //Colors change
-    void changeSelectedColor();
+    void changeEdgesColor();
+    void changeFacesColor();
     void adjusSelectedAndHighlighted(Cell* cell);
-    bool adjustSelectColors(Cell* cell);
-    void adjustSelectColorsAll();
+    void adjustSelectColors(Cell* cell);
 
     void calculateSelectedGeometry();
 
@@ -497,6 +498,7 @@ private:
     bool isManualTransform_;
 
     int lastShapeID_;
+    QTimer* checkPointTimer;
 };
 
 }

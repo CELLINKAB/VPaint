@@ -40,7 +40,8 @@ private:
                VectorAnimationComplex::VAC * vac,
                const QString & layerName,
                bool isVisible,
-               qreal layerHeight);
+               qreal layerHeight,
+               double opacity = 1.0);
 
 public:
     explicit Layer(const QString & layerName = QStringLiteral("Layer"),qreal layerHeight = 0);
@@ -73,7 +74,6 @@ public:
     void setVisible(bool b);
     qreal layerHeight() const;
     void setLayerHeight(qreal height);
-    Layer* cloneWithBackground();
 
 signals:
     // defined in base class (Scene Object)
