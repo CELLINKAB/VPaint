@@ -2000,17 +2000,20 @@ void VAC::adjustSelectColorsAll()
     for (auto cell : cells())
     {
         KeyEdge* keyEdge = cell->toKeyEdge();
-        if (keyEdge != nullptr)
+        if (keyEdge != nullptr && !keyEdge->isIgnored())
         {
             adjusSelectedAndHighlighted(keyEdge);
             KeyVertex* keyVertexStart = keyEdge->startVertex();
             KeyVertex* keyVertexEnd = keyEdge->endVertex();
-            keyVertexStart->setColor(keyEdge->color());
-            keyVertexEnd->setColor(keyEdge->color());
-            if (!global()->isShowVerticesOnSelection())
+            if (keyVertexStart != nullptr && keyVertexEnd != nullptr)
             {
-                adjusSelectedAndHighlighted(keyVertexStart);
-                adjusSelectedAndHighlighted(keyVertexEnd);
+                keyVertexStart->setColor(keyEdge->color());
+                keyVertexEnd->setColor(keyEdge->color());
+                if (!global()->isShowVerticesOnSelection())
+                {
+                    adjusSelectedAndHighlighted(keyVertexStart);
+                    adjusSelectedAndHighlighted(keyVertexEnd);
+                }
             }
         }
     }
