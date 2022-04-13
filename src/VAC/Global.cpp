@@ -37,6 +37,10 @@
 #include <QStatusBar>
 #include <QDir>
 
+namespace {
+const constexpr auto SURFACE_ROUND_VERTICES = 100;
+}
+
 // -------- Initialization --------
 
 Global * global_ = 0;
@@ -66,14 +70,27 @@ Global::Global(MainWindow * w) :
     isDrawShapeFaceEnabled_(true),
     isShowAroundRectangleWhenDraw_(false),
     isShowVerticesOnSelection_(false),
+    isShowGrid_(false),
+    isGridSnapping_(true),
     highlightColorRatio_(1.2),
     highlightAlphaRatio_(2.0),
     selectColorRatio_(1.4),
     selectAlphaRatio_(3.0),
+    surfaceScaleFactor_(1.0),
+    gridSizeMM_(1.0),
+    gridSize_(1.0),
     pasteDeltaX_(15),
     pasteDeltaY_(15),
     selectedGeometry_{0, 0, 0, 0},
-    mousePastePosition_{0, 0}
+    mousePastePosition_{0, 0},
+    surfaceType_(VPaint::SurfaceType::None),
+    surfaceBackGroundColor_{QColor(Qt::white)},
+    surfaceBorderColor_{QColor(Qt::darkGray)},
+    gridColor_{QColor(Qt::gray)},
+    surfaceVertices_{},
+    gridLines_{},
+    gridHorizontalValues_{},
+    gridVerticalValues_{}
 {
     // Color selectors
     currentColor_ = new ColorSelector();
@@ -945,12 +962,12 @@ void Global::setShowVerticesOnSelection(bool isShow)
 
 double Global::pasteDeltaX()
 {
-    return pasteDeltaX_;
+    return (isShowGrid_ && isGridSnapping_) ? gridSize_ : pasteDeltaX_;
 }
 
 double Global::pasteDeltaY()
 {
-    return pasteDeltaY_;
+    return (isShowGrid_ && isGridSnapping_) ? gridSize_ : pasteDeltaY_;
 }
 
 void Global::setPasteDelta(double dx, double dy)
@@ -989,6 +1006,103 @@ void Global::storeMousePastePos()
     emit rightMouseClicked();
 }
 
+void Global::setSurfaceType(VPaint::SurfaceType newSurfaceType)
+{
+    surfaceType_ = newSurfaceType;
+    updateSurfaceVertices();
+    updateGrid();
+}
+
+void Global::setShowGrid(bool showGrid)
+{
+    isShowGrid_ = showGrid;
+    updateGrid();
+    scene()->emitChanged();
+}
+
+void Global::setGridSnapping(bool gridSnapping)
+{
+    isGridSnapping_ = gridSnapping;
+}
+
+void Global::setSurfaceScaleFactor(double scaleFactor)
+{
+    surfaceScaleFactor_ = scaleFactor;
+    gridSize_ = gridSizeMM_ * scaleFactor;
+}
+
+void Global::setGridSize(double gridSizeMM)
+{
+    gridSizeMM_ = gridSizeMM;
+    gridSize_ = gridSizeMM * surfaceScaleFactor_;
+    updateGrid();
+    scene()->emitChanged();
+}
+
+void Global::setSurfaceColors(const QColor& bgColor, const QColor& borderColor, const QColor& gridColor)
+{
+    surfaceBackGroundColor_ = QColor(bgColor);
+    surfaceBorderColor_ = QColor(borderColor);
+    gridColor_ =  QColor(gridColor);
+}
+
+void Global::calculateSnappedHPosition(double& x)
+{
+    if (isShowGrid_ && isGridSnapping_)
+    {
+        auto xIndex = qCeil(round((scene()->left() + x) / gridSize_));
+        xIndex = xIndex < gridHorizontalValues_.count() ? xIndex : gridHorizontalValues_.count() - 1;
+        x = (gridHorizontalValues_.isEmpty() || xIndex < 0) ? x : gridHorizontalValues_[xIndex];
+    }
+}
+
+void Global::calculateSnappedVPosition(double& y)
+{
+    if (isShowGrid_ && isGridSnapping_)
+    {
+        auto yIndex = qCeil(round((scene()->top() + y) / gridSize_));
+        yIndex = yIndex < gridVerticalValues_.count() ? yIndex : gridVerticalValues_.count() - 1;
+        y = (gridVerticalValues_.isEmpty() || yIndex < 0) ? y : gridVerticalValues_[yIndex];
+    }
+}
+
+void Global::calculateSnappedPosition(double& x, double& y)
+{
+    if (isShowGrid_ && isGridSnapping_)
+    {
+        calculateSnappedHPosition(x);
+        calculateSnappedVPosition(y);
+    }
+}
+
+void Global::calculateSnappedPosition(QPointF& pos)
+{
+    if (isShowGrid_ && isGridSnapping_)
+    {
+        auto xRes = pos.x();
+        auto yRes = pos.y();
+        calculateSnappedPosition(xRes, yRes);
+        pos.setX(xRes);
+        pos.setY(yRes);
+    }
+}
+
+QPointF Global::getSnappedPosition(double x, double y)
+{
+    auto xRes = x;
+    auto yRes = y;
+    calculateSnappedPosition(xRes, yRes);
+    return QPointF(xRes, yRes);
+}
+
+QPointF Global::getSnappedPosition(const QPointF& pos)
+{
+    auto xRes = pos.x();
+    auto yRes = pos.y();
+    calculateSnappedPosition(xRes, yRes);
+    return QPointF(xRes, yRes);
+}
+
 bool Global::useTabletPressure() const
 {
     return actionUseTabletPressure_->isChecked();
@@ -1002,6 +1116,102 @@ double Global::edgeWidth() const
 void Global::setEdgeWidth_(double w)
 {
     preferences_.setEdgeWidth(w);
+}
+
+void Global::updateSurfaceVertices()
+{
+    surfaceVertices_.clear();
+
+    const auto x0 = scene()->left();
+    const auto y0 = scene()->top();
+    const auto w = scene()->width();
+    const auto h = scene()->height();
+
+    switch (surfaceType_) {
+    case VPaint::SurfaceType::WellPlate:
+    case VPaint::SurfaceType::PetriDish:
+    {
+        const auto x = x0 + w / 2;
+        const auto y = y0 + h / 2;
+        const auto r = w / 2;
+        for (auto i = 0; i <= SURFACE_ROUND_VERTICES; i++)
+        {
+            auto angle = 2 * M_PI * i / SURFACE_ROUND_VERTICES;
+            surfaceVertices_.append(QPointF(x0 + r * cos(angle) + x, y0 + r * sin(angle) + y));
+        }
+        break;
+    }
+    case VPaint::SurfaceType::GlassSlide:
+    {
+        surfaceVertices_.append(QPointF(x0, y0));
+        surfaceVertices_.append(QPointF(x0 + w, y0));
+        surfaceVertices_.append(QPointF(x0 + w, y0 + h));
+        surfaceVertices_.append(QPointF(x0, y0 + h));
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void Global::updateGrid()
+{
+    gridLines_.clear();
+    gridHorizontalValues_.clear();
+    gridVerticalValues_.clear();
+
+    const auto x0 = scene()->left();
+    const auto y0 = scene()->top();
+    const auto w = scene()->width();
+    const auto h = scene()->height();
+
+    switch (surfaceType_) {
+    case VPaint::SurfaceType::WellPlate:
+    case VPaint::SurfaceType::PetriDish:
+    {
+        const auto x = x0 + w / 2;
+        const auto y = y0 + h / 2;
+        const auto rx = w / 2;
+        const auto ry = h / 2;
+        const auto gridLinesCount = qFloor(w / gridSize_);
+
+        for (auto i = 0; i < gridLinesCount; i++)
+        {
+            auto lineX = x0 + i * gridSize_;
+            auto lineY = y0 + i * gridSize_;
+            auto deltaX = sqrt(abs(rx * rx - (lineY - y) * (lineY - y)));
+            auto deltaY = sqrt(abs(ry * ry - (lineX - x) * (lineX - x)));
+
+            gridLines_.append(QPair(QPointF(x - deltaX, lineY), QPointF(x + deltaX, lineY)));
+            gridLines_.append(QPair(QPointF(lineX, y - deltaY), QPointF(lineX, y + deltaY)));
+            gridHorizontalValues_.append(lineX);
+            gridVerticalValues_.append(lineY);
+        }
+        break;
+    }
+    case VPaint::SurfaceType::GlassSlide:
+    {
+        const auto gridVLinesCount = qCeil(round(w / gridSize_));
+        const auto gridHLinesCount = qCeil(round(h / gridSize_));
+
+        for (auto i = 0; i < gridVLinesCount; i++)
+        {
+            auto lineX = x0 + i * gridSize_;
+            gridLines_.append(QPair(QPointF(lineX, y0), QPointF(lineX, y0 + h)));
+            gridHorizontalValues_.append(lineX);
+        }
+
+        for (auto i = 0; i < gridHLinesCount; i++)
+        {
+            auto lineY = y0 + i * gridSize_;
+            gridLines_.append(QPair(QPointF(x0, lineY), QPointF(x0 + w, lineY)));
+            gridVerticalValues_.append(lineY);
+        }
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 void Global::setEdgeWidth(double w)

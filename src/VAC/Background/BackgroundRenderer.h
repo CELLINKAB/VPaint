@@ -61,6 +61,8 @@ public:
               double xSceneMin, double xSceneMax,
               double ySceneMin, double ySceneMax);
 
+    void drawSurface(bool rounded = false);
+
 signals:
     void backgroundDestroyed(Background * background);
 

@@ -338,6 +338,13 @@ public:
 
     ShapeType shapeType() const;
     void setShapeType(const ShapeType type);
+
+    inline const int shapeID() const { return shapeID_; }
+    void setShapeID(const int id);
+
+    inline const bool isIgnored() const { return isIgnored_; }
+    void setIgnored(bool ignored);
+
 protected:
     // Make a call to  glColor, taking into account the member
     // color,  the selected state  and the  highlighted state.
@@ -434,6 +441,8 @@ private:
     // Return the list of cells whose geometry depends on this cell's geometry
     CellSet geometryDependentCells_();
     ShapeType shapeType_;
+    int shapeID_;
+    bool isIgnored_;
 };
     
 }

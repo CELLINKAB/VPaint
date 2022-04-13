@@ -71,7 +71,11 @@
 #define  OCTAGON_ACTION                                     409
 
 namespace {
-const constexpr auto CIRCLE_ANGLES = 40;
+const constexpr auto CIRCLE_VERTICES = 40;
+const constexpr auto POLYGON_ARROUND_VERTICES_FROM = 4;
+const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
+const constexpr auto POLYGON_ARROUND_ALPHA = 60;
+const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
 }
 
 View::View(VPaint::Scene * scene, QWidget * parent) :
@@ -80,8 +84,8 @@ View::View(VPaint::Scene * scene, QWidget * parent) :
     pickingImg_(0),
     pickingIsEnabled_(true),
     currentAction_(0),
-    shapeStartX(0),
-    shapeStartY(0),
+    shapeStartX_(0),
+    shapeStartY_(0),
     vac_(0)
 {
     // View settings widget
@@ -106,8 +110,8 @@ View::View(VPaint::Scene * scene, QWidget * parent) :
 
     connect(global(), SIGNAL(keyboardModifiersChanged()), this, SLOT(handleNewKeyboardModifiers()));
 
-    connect(global(), &Global::edgeColorChanged, this, [this]() { if(vac_) { vac_->changeEdgesColor(); }});
-    connect(global(), &Global::faceColorChanged, this, [this]() { if(vac_) { vac_->changeFacesColor(); }});
+    connect(global(), &Global::edgeColorChanged, this, [this]() { if(vac_) { vac_->changeSelectedColor(); }});
+    connect(global(), &Global::faceColorChanged, this, [this]() { if(vac_) { vac_->changeSelectedColor(); }});
 }
 
 View::~View()
@@ -785,15 +789,15 @@ void View::PMRMoveEvent(int action, double x, double y)
     }
     else if(action == PENTAGON_ACTION)
     {
-        drawPolygon(x, y, 5, 180, ShapeDrawPhase::DRAW_PROCESS);
+        drawPolygon(x, y, 5, -90, ShapeDrawPhase::DRAW_PROCESS);
     }
     else if(action == HEXAGON_ACTION)
     {
-        drawPolygon(x, y, 6, 90, ShapeDrawPhase::DRAW_PROCESS);
+        drawPolygon(x, y, 6, 0, ShapeDrawPhase::DRAW_PROCESS);
     }
     else if(action == HEPTAGON_ACTION)
     {
-        drawPolygon(x, y, 7, 180, ShapeDrawPhase::DRAW_PROCESS);
+        drawPolygon(x, y, 7, -90, ShapeDrawPhase::DRAW_PROCESS);
     }
     else if(action == OCTAGON_ACTION)
     {
@@ -965,15 +969,15 @@ void View::PMRReleaseEvent(int action, double x, double y)
     }
     else if(action == PENTAGON_ACTION)
     {
-        drawPolygon(x, y, 5, 180, ShapeDrawPhase::DRAW_END);
+        drawPolygon(x, y, 5, -90, ShapeDrawPhase::DRAW_END);
     }
     else if(action == HEXAGON_ACTION)
     {
-        drawPolygon(x, y, 6, 90, ShapeDrawPhase::DRAW_END);
+        drawPolygon(x, y, 6, 0, ShapeDrawPhase::DRAW_END);
     }
     else if(action == HEPTAGON_ACTION)
     {
-        drawPolygon(x, y, 7, 180, ShapeDrawPhase::DRAW_END);
+        drawPolygon(x, y, 7, -90, ShapeDrawPhase::DRAW_END);
     }
     else if(action == OCTAGON_ACTION)
     {
@@ -1032,13 +1036,29 @@ BackgroundRenderer * View::getOrCreateBackgroundRenderer_(Background * backgroun
     return br;
 }
 
-void View::drawBackground_(Background * background, int frame)
+void View::drawBackground_(Background* background, int frame)
 {
-    BackgroundRenderer * br = getOrCreateBackgroundRenderer_(background);
-    br->draw(frame,
-             global()->showCanvas(),
-             scene_->left(), scene_->top(), scene_->width(), scene_->height(),
-             xSceneMin(), xSceneMax(), ySceneMin(), ySceneMax());
+    BackgroundRenderer* br = getOrCreateBackgroundRenderer_(background);
+
+    switch (global()->surfaceType()) {
+    case VPaint::SurfaceType::WellPlate:
+    case VPaint::SurfaceType::PetriDish:
+    {
+        br->drawSurface(true);
+        break;
+    }
+    case VPaint::SurfaceType::GlassSlide:
+    {
+        br->drawSurface();
+        break;
+    }
+    default:
+        br->draw(frame,
+                 global()->showCanvas(),
+                 scene_->left(), scene_->top(), scene_->width(), scene_->height(),
+                 xSceneMin(), xSceneMax(), ySceneMin(), ySceneMax());
+        break;
+    }
 }
 
 void View::processRectangleOfSelection(double x, double y, ShapeDrawPhase drawPhase)
@@ -1067,42 +1087,39 @@ void View::startDrawShape(double x, double y)
 
     lastMousePos_ = QPoint(mouse_Event_X_, mouse_Event_Y_);
 
-    QPointF pos = QPointF(x,y);
-    shapeStartX = pos.rx();
-    shapeStartY = pos.ry();
+    QPointF pos = global()->getSnappedPosition(x, y);
+    shapeStartX_ = pos.x();
+    shapeStartY_ = pos.y();
 
     emit allViewsNeedToUpdate();
 }
 
 void View::endDrawShape()
 {
-    adjustCellsColors();
-    lastDrawnCells.clear();
+    adjustCellsColors();    
+    lastDrawnCells_.clear();
+    vac_->endDrawShape();
     vac_->deselectAll();
     scene()->emitCheckpoint();
 }
 
 void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
 {
-    QPointF pos = QPointF(x,y);
-    double xScene = pos.rx();
-    double yScene = pos.ry();
+    auto pos = global()->getSnappedPosition(x, y);
+    auto xScene = pos.x();
+    auto yScene = pos.y();
 
     double w = global()->settings().edgeWidth();
-    bool debug = false;
-
-    if(!debug)
+    if(mouse_isTablet_ &&  global()->useTabletPressure())
     {
-        if(mouse_isTablet_ &&  global()->useTabletPressure())
-            w *= 2 * mouse_tabletPressure_;
+        w *= 2 * mouse_tabletPressure_;
     }
 
     switch (drawPhase) {
     case ShapeDrawPhase::DRAW_START:
     {
-        lastMousePos_ = QPoint(mouse_Event_X_,mouse_Event_Y_);
+        lastMousePos_ = QPoint(mouse_Event_X_, mouse_Event_Y_);
         vac_->beginSketchEdge(xScene, yScene, w, interactiveTime());
-
         emit allViewsNeedToUpdate();
         break;
     }
@@ -1113,25 +1130,30 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
     }
     case ShapeDrawPhase::DRAW_END:
     {
-        vac_->endSketchEdge();
-        lastDrawnCells.clear();
+        vac_->endSketchEdge(false);
+        lastDrawnCells_.clear();
         auto keyVertices = vac_->instantVertices();
-        if (!keyVertices.isEmpty()) {
-            keyVertices.last()->setShapeType(ShapeType::CURVE);
-            lastDrawnCells << keyVertices.last();
-            keyVertices.at(keyVertices.count() - 2)->setShapeType(ShapeType::CURVE);
-            lastDrawnCells << keyVertices.at(keyVertices.count() - 2);
-            lastDrawnCells <<  vac_->instantEdges().last();
+        auto keyEdges = vac_->instantEdges();
+        if (keyVertices.count() > 1 && !keyEdges.isEmpty()) {
+            auto vertex1 = keyVertices.last();
+            auto vertex2 = keyVertices.at(keyVertices.count() - 2);
+            auto edge = keyEdges.last();
+            vertex1->setShapeType(ShapeType::CURVE);
+            vertex2->setShapeType(ShapeType::CURVE);
+            lastDrawnCells_ << vertex1;
+            lastDrawnCells_ << vertex2;
+            lastDrawnCells_ <<  edge;
             if (global()->isDrawShapeFaceEnabled()) {
-                for (auto cell : lastDrawnCells)
+                for (auto cell : lastDrawnCells_)
                 {
                     vac_->addToSelection(cell, false);
                 }
-                scene()->createFace();
+                vac_->createFace(false);
                 auto faceCell = vac_->faces().last();
                 faceCell->setShapeType(ShapeType::CURVE);
                 vac_->addToSelection(faceCell);
-                lastDrawnCells << faceCell;
+                lastDrawnCells_ << faceCell;
+                lastDrawnCells_ << vac_->instantEdges().last();
             }
             endDrawShape();
             scene()->emitShapeDrawn(ShapeType::CURVE);
@@ -1172,7 +1194,7 @@ void View::drawCircle(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_PROCESS:
     {
         //Draw circle as polygon
-        drawShape(x, y, ShapeType::POLYGON, CIRCLE_ANGLES, 0, true );
+        drawShape(x, y, ShapeType::POLYGON, CIRCLE_VERTICES, 0, true);
 //        drawShape(x, y, ShapeType::CIRCLE);
         break;
     }
@@ -1241,9 +1263,50 @@ void View::drawPolygon(double x, double y, int countAngles, double rotation, Sha
     }
     case ShapeDrawPhase::DRAW_END:
     {
+        // Since the polygon have to be inscribed in a circle/ellipse, so a transparent
+        // bounding circle/ellipse is drawn around the polygons with more than 4 vertices.
+        // This is used to correct the behavior of polygons, namely:
+        // - displaying the same polygon size at the end of the drawing and after selection on the shape parameters bar;
+        // - ability to draw a regular(equilateral) polygon(when holding down the "Shift" key during draw)
+        // - correcting behavior of the grid snapping feature for polygons(works like as for circle/ellipse).
+        // All cells of this bounding circle/ellipse are marked as ignored and aren't used for generate a G-code
+        // It is now visible for debugging/demonstration, later it will be setted to transparent.
+        if (countAngles > POLYGON_ARROUND_VERTICES_FROM && countAngles < POLYGON_ARROUND_VERTICES_TO)
+        {
+            const auto angleStep = M_PI / 50;
+            QColor boundingColor = global()->edgeColor();
+            boundingColor.setAlpha(POLYGON_ARROUND_ALPHA);
+
+            const auto rx = global()->selectedGeometry().width() / 2;
+            const auto ry = global()->selectedGeometry().height() / 2;
+            const auto xCenter = global()->selectedGeometry().x() + rx;
+            const auto yCenter = global()->selectedGeometry().y() + ry;
+            vac_->beginSketchEdge(xCenter + rx, yCenter, POLYGON_ARROUND_LINE_SIZE, interactiveTime());
+            for (auto angle = 0.0; angle <= M_PI * 2; angle += angleStep)
+            {
+                const auto newX = xCenter + rx * cos(angle);
+                const auto newY = yCenter + ry * sin(angle);
+                vac_->continueSketchEdge(newX, newY, POLYGON_ARROUND_LINE_SIZE);
+            }
+//            vac_->continueSketchEdge(xCenter + rx, yCenter, POLYGON_ARROUND_LINE_SIZE);
+            vac_->endSketchEdge(false);
+
+            QList<VectorAnimationComplex::Cell*> boundingCells;
+            boundingCells << vac_->instantVertices().last();
+            boundingCells << vac_->instantVertices().at(vac_->instantVertices().count() - 2);
+            boundingCells << vac_->instantEdges().last();
+
+            for (auto cell : boundingCells)
+            {
+                cell->setIgnored(true);
+                vac_->assignShapeID(cell);
+                cell->setColor(boundingColor);
+                cell->setHighlightedColor(boundingColor);
+                cell->setSelectedColor(boundingColor);
+            }
+        }
         endDrawShape();
         scene()->emitShapeDrawn(ShapeType::POLYGON);
-
         break;
     }
     default:
@@ -1253,14 +1316,16 @@ void View::drawPolygon(double x, double y, int countAngles, double rotation, Sha
 
 void View::adjustCellsColors()
 {
-    for (auto cell : lastDrawnCells)
+    for (auto cell : lastDrawnCells_)
     {
+        vac_->assignShapeID(cell);
         vac_->adjustSelectColors(cell);
     }
 }
-void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, double rotation, bool drawingCircle)
+
+void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, double initialRotation, bool drawingCircle)
 {
-    QPoint currentMousePos = QPoint(mouse_Event_X_,mouse_Event_Y_);
+    const auto currentMousePos = QPoint(mouse_Event_X_, mouse_Event_Y_);
 
     if((currentMousePos - lastMousePos_).manhattanLength() < 3)
         return;
@@ -1272,25 +1337,23 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
 
     QVector<QPointF> verticesPoints(countAngles);
 
-    QPointF pos = QPointF(x,y);
-    double xScene = pos.rx();
-    double yScene = pos.ry();
+    const auto pos = global()->getSnappedPosition(x, y);
+    const auto xScene = pos.x();
+    const auto yScene = pos.y();
 
-    double w = global()->settings().edgeWidth();
-    bool debug = false;
-    if(!debug)
+    auto w = global()->settings().edgeWidth();
+    if(mouse_isTablet_ &&  global()->useTabletPressure())
     {
-        if(mouse_isTablet_ &&  global()->useTabletPressure())
-          w *= 2 * mouse_tabletPressure_; // 2 so that a half-pressure would get the default width
+        w *= 2 * mouse_tabletPressure_; // 2 so that a half-pressure would get the default width
     }
 
-    double leftX = xScene > shapeStartX ? shapeStartX : xScene;
-    double rightX = leftX == shapeStartX ? xScene : shapeStartX;
-    double topY = yScene > shapeStartY ? shapeStartY : yScene;
-    double bottomY = topY == shapeStartY ? yScene : shapeStartY;
+    auto leftX = xScene > shapeStartX_ ? shapeStartX_ : xScene;
+    auto rightX = leftX == shapeStartX_ ? xScene : shapeStartX_;
+    auto topY = yScene > shapeStartY_ ? shapeStartY_ : yScene;
+    auto bottomY = topY == shapeStartY_ ? yScene : shapeStartY_;
 
-    double shapeWidth = rightX - leftX;
-    double shapeHeight = bottomY - topY;
+    auto shapeWidth = rightX - leftX;
+    auto shapeHeight = bottomY - topY;
 
     if (shapeType != ShapeType::LINE && global()->keyboardModifiers() == Qt::ShiftModifier)
     {
@@ -1306,15 +1369,16 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
         }
     }
 
-    if (!lastDrawnCells.isEmpty())
+    if (!lastDrawnCells_.isEmpty())
     {
-        vac_->deleteCells(lastDrawnCells);
-        lastDrawnCells.clear();
+        vac_->deleteCells(lastDrawnCells_);
+        lastDrawnCells_.clear();
     }
 
     auto processDrawShape = [this, &verticesPoints, &w, shapeType, &drawingCircle](bool isClosedShape = true)
     {
-        int verticesCount = verticesPoints.count();
+        const auto verticesCount = verticesPoints.count();
+
         //Draw Vertices
         QVector<Vertex*> vertices;
         for (auto point : verticesPoints)
@@ -1323,7 +1387,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
             vertex->setColor(global()->edgeColor());
 
             vertices << vertex;
-            lastDrawnCells << vertex;
+            lastDrawnCells_ << vertex;
         }
 
         //Draw Edges
@@ -1332,70 +1396,68 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
         {
             auto keyEdge = vac_->newKeyEdge(interactiveTime(), vertices[i], vertices[i + 1], 0, w);
             edges << keyEdge;
-            lastDrawnCells << keyEdge;
+            lastDrawnCells_ << keyEdge;
         }
         if (isClosedShape)
         {
             auto keyEdge = vac_->newKeyEdge(interactiveTime(), vertices[verticesCount - 1], vertices[0], 0, w);
             edges << keyEdge;
-            lastDrawnCells << keyEdge;
+            lastDrawnCells_ << keyEdge;
         }
 
         //Draw face
-        if (global()->isDrawShapeFaceEnabled() && isClosedShape)
+        if (global()->isDrawShapeFaceEnabled())
         {
             Cycle cycle(edges);
             auto faceCell = vac_->newKeyFace(cycle);
             faceCell->setColor(global()->faceColor());
-            drawingCircle?faceCell->setShapeType(ShapeType::CIRCLE): faceCell->setShapeType(shapeType);
-            lastDrawnCells << faceCell->toFaceCell();
+            drawingCircle ? faceCell->setShapeType(ShapeType::CIRCLE) : faceCell->setShapeType(shapeType);
+            lastDrawnCells_ << faceCell->toFaceCell();
         }
     };
 
     switch (shapeType) {
     case ShapeType::LINE:
     {
-        verticesPoints[0] = QPointF(shapeStartX, shapeStartY);
+        verticesPoints[0] = QPointF(shapeStartX_, shapeStartY_);
         verticesPoints[1] = QPointF(xScene, yScene);
-        processDrawShape();
+        processDrawShape(false);
         break;
     }
     case ShapeType::CIRCLE:
     {
-        double radiusH = shapeHeight / 2;
-        double radiusW = shapeWidth / 2;
+        const auto radiusH = shapeHeight / 2;
+        const auto radiusW = shapeWidth / 2;
 
-        double centerX = (leftX + rightX) / 2;
-        double centerY = (topY + bottomY) / 2;
+        const auto centerX = (leftX + rightX) / 2;
+        const auto centerY = (topY + bottomY) / 2;
 
-        double startX = centerX + radiusW;
-        double startY = centerY;
+        const auto startX = centerX + radiusW;
+        const auto startY = centerY;
+        const auto angleStep = M_PI / 50;
+
         vac_->beginSketchEdge(startX, startY, w, interactiveTime());
-
-        for (double deg = 0; deg < M_PI * 2; deg += 0.01)
+        for (auto angle = 0.0; angle <= M_PI * 2; angle += angleStep)
         {
-            double x = radiusW * cos(deg);
-            double y = radiusH * sin(deg);
-
-            double newX = centerX + x;
-            double newY = centerY + y;
+            const auto newX = centerX + radiusW * cos(angle);
+            const auto newY = centerY + radiusH * sin(angle);
             vac_->continueSketchEdge(newX, newY, w);
         }
-        vac_->endSketchEdge();
-        lastDrawnCells << vac_->instantVertices().last();
-        lastDrawnCells <<  vac_->instantEdges().last();
+        vac_->endSketchEdge(false);
+        lastDrawnCells_ << vac_->instantVertices().last();
+        lastDrawnCells_ <<  vac_->instantEdges().last();
 
         if (global()->isDrawShapeFaceEnabled())
         {
-            for (auto cell : lastDrawnCells)
+            for (auto cell : lastDrawnCells_)
             {
                 vac_->addToSelection(cell, false);
             }
-            scene()->createFace();
+            scene()->createFace(false);
             auto faceCell = vac_->faces().last();
             faceCell->setShapeType(shapeType);
             vac_->addToSelection(faceCell);
-            lastDrawnCells << faceCell;
+            lastDrawnCells_ << faceCell;
             endDrawShape();
         }
         break;
@@ -1421,14 +1483,15 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
     }
     case ShapeType::POLYGON:
     {
-        auto deg2Rad = [](double degree) { return (degree * M_PI) / 180; };
-
-        auto getX = [&shapeWidth, &leftX, &deg2Rad](double angle) { return (cos(deg2Rad(angle + 90)) + 1) * shapeWidth / 2 + leftX; };
-        auto getY = [&shapeHeight, &topY, &deg2Rad](double angle) { return (sin(deg2Rad(angle + 90)) + 1) * shapeHeight / 2 + topY; };
-
+        const auto rx = shapeWidth / 2;
+        const auto ry = shapeHeight / 2;
+        const auto xCenter = leftX + rx;
+        const auto yCenter = topY + ry;
         for (auto i = 0; i < countAngles; i++)
         {
-            verticesPoints[i] = QPointF(getX(360 * i / countAngles + rotation), getY(360 * i / countAngles + rotation));
+            auto angle = qDegreesToRadians(initialRotation) + 2 * M_PI * i / countAngles;
+            auto pos = QPointF(rx * cos(angle) + xCenter, ry * sin(angle) + yCenter);
+            verticesPoints[i] = pos;
         }
         processDrawShape();
         break;
@@ -1439,7 +1502,6 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
 
     // Update the selection geometry for display the correct selection size when drawing
     global()->updateSelectedGeometry(leftX, topY, shapeWidth, shapeHeight, true);
-
     lastMousePos_ = currentMousePos;
 }
 
@@ -1476,8 +1538,8 @@ void View::drawScene()
         }
     }
 
-    // Clear to white
-    glClearColor(1.0,1.0,1.0,1.0);
+    // Clear to transparent
+    glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
     // Note:

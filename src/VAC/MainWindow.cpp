@@ -1709,7 +1709,7 @@ void MainWindow::createActions()
     actionShowCanvas = new QAction(tr("Display canvas"), this);
     actionShowCanvas->setStatusTip(tr("Show or hide the canvas borders."));
     actionShowCanvas->setCheckable(true);
-    actionShowCanvas->setChecked(true);
+    actionShowCanvas->setChecked(false);
     //actionShowCanvas->setShortcut(QKeySequence::ZoomOut);
     //actionShowCanvas->setShortcutContext(Qt::ApplicationShortcut);
     connect(actionShowCanvas, SIGNAL(triggered(bool)), this, SLOT(toggleShowCanvas(bool)));

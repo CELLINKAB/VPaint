@@ -51,7 +51,7 @@ namespace VectorAnimationComplex
 
 Cell::Cell(VAC * vac) :
     vac_(vac), id_(-1),
-    isHovered_(0), isSelected_(0)
+    isHovered_(0), isSelected_(0), shapeType_(ShapeType::NONE),  shapeID_(0), isIgnored_(false)
 {
     colorHighlighted_[0] = 1;
     colorHighlighted_[1] = 0.7;
@@ -180,6 +180,8 @@ Cell::Cell(Cell * other)
     temporalStarBefore_ = other->temporalStarBefore_;
     temporalStarAfter_ = other->temporalStarAfter_;
     shapeType_ = other->shapeType_;
+    shapeID_ = other->shapeID_;
+    isIgnored_ = other->isIgnored_;
 }
 
 void Cell::remapPointers(VAC * newVAC)
@@ -230,6 +232,16 @@ ShapeType Cell::shapeType() const
 void Cell::setShapeType(const ShapeType type)
 {
     shapeType_ = type;
+}
+
+void Cell::setShapeID(const int id)
+{
+    shapeID_ = id;
+}
+
+void Cell::setIgnored(bool ignored)
+{
+    isIgnored_ = ignored;
 }
 
 void Cell::setColor(const QColor& c)

@@ -151,7 +151,7 @@ public slots:
     void cut(VectorAnimationComplex::VAC* & clipboard);
     void copy(VectorAnimationComplex::VAC* & clipboard);
     void paste(VectorAnimationComplex::VAC* & clipboard, bool isMousePaste = false);
-    void createFace();
+    void createFace(bool emitCheckpoint = true);
     void addCyclesToFace();
     void removeCyclesFromFace();
     void changeColor();

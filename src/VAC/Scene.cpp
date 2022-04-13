@@ -50,12 +50,8 @@ Scene::Scene() :
 Scene * Scene::createDefaultScene()
 {
     Scene * res = new Scene();
-    Layer * layer = res->createLayer(tr("Layer 1"));
-#ifdef CELLINK_VPAINT_STYLE
-    layer->background()->setColor(QColor::fromRgb(240, 241, 242));
-#else
-    layer->background()->setColor(Qt::white);
-#endif
+    auto layer = res->createLayer(tr("Layer 1"));
+    layer->background()->setOpacity(1.0);
     return res;
 }
 
@@ -398,7 +394,7 @@ void Scene::setHoveredObject(Time time, int index, int id)
     setNoHoveredObject();
     indexHovered_ = index;
     layers_[index]->setHoveredObject(time, id);
-    layers_[index]->vac()->hoveveredConnected();
+    layers_[index]->vac()->hoveverShape();
 }
 
 void Scene::setNoHoveredObject()
@@ -726,6 +722,7 @@ QList<ShapeType>Scene::getActiveLayerShapesType()
     }
     return shapesType;
 }
+
 void Scene::deleteSelectedCells()
 {
     Layer * layer = activeLayer();
@@ -991,12 +988,12 @@ void Scene::motionPaste(VectorAnimationComplex::VAC* & clipboard)
     }
 }
 
-void Scene::createFace()
+void Scene::createFace(bool emitCheckpoint)
 {
     Layer * layer = activeLayer();
     if(layer)
     {
-        layer->vac()->createFace();
+        layer->vac()->createFace(emitCheckpoint);
     }
 }
 

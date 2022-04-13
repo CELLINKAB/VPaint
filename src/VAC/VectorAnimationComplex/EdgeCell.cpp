@@ -217,11 +217,6 @@ EdgeCell::~EdgeCell()
 EdgeCell::EdgeCell(EdgeCell * other) :
     Cell(other)
 {
-    // highlighted/selected color
-    colorSelected_[0] = 1;
-    colorSelected_[1] = 0;
-    colorSelected_[2] = 0;
-    colorSelected_[3] = 1;
 }
 
 void EdgeCell::remapPointers(VAC * /*newVAC*/)

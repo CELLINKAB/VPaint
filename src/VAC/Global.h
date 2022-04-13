@@ -50,6 +50,13 @@ class Timeline;
 namespace VPaint
 {
 class Scene;
+enum class SurfaceType
+{
+    None = -1,
+    PetriDish,
+    WellPlate,
+    GlassSlide
+};
 }
 
 namespace VectorAnimationComplex
@@ -162,6 +169,38 @@ public:
 
     inline const QPointF& mousePastePosition() const { return mousePastePosition_; }
     void storeMousePastePos();
+
+    inline const VPaint::SurfaceType surfaceType() const { return surfaceType_; }
+    void setSurfaceType(VPaint::SurfaceType newSurfaceType);
+
+    inline const bool isShowGrid() const { return isShowGrid_; }
+    void setShowGrid(bool showGrid);
+
+    inline const double gridSizeMM() const { return gridSizeMM_; }
+    inline const double gridSize() const { return gridSize_; }
+    void setGridSize(double gridSizeMM);
+
+    inline const bool isGridSnapping() const { return isShowGrid_ && isGridSnapping_; }
+    void setGridSnapping(bool gridSnapping);
+
+    inline const double surfaceScaleFactor() const { return surfaceScaleFactor_; }
+    void setSurfaceScaleFactor(double scaleFactor);
+
+    inline const QColor& surfaceBackGroundColor() const { return surfaceBackGroundColor_; }
+    inline const QColor& surfaceBorderColor() const { return surfaceBorderColor_; }
+    inline const QColor& gridColor() const { return gridColor_; }
+
+    void setSurfaceColors(const QColor& bgColor, const QColor& borderColor, const QColor& gridColor);
+
+    inline const QList<QPointF>& surfaceVertices() const { return surfaceVertices_; }
+    inline const QList<QPair<QPointF, QPointF>>& gridLines() const { return gridLines_; }
+
+    void calculateSnappedHPosition(double& x);
+    void calculateSnappedVPosition(double& y);
+    void calculateSnappedPosition(double& x, double& y);
+    void calculateSnappedPosition(QPointF& pos);
+    QPointF getSnappedPosition(double x, double y);
+    QPointF getSnappedPosition(const QPointF& pos);
 
     // Display modes
     enum DisplayMode {
@@ -316,17 +355,36 @@ private:
     bool isDrawShapeFaceEnabled_;
     bool isShowAroundRectangleWhenDraw_;
     bool isShowVerticesOnSelection_;
+    bool isShowGrid_;
+    bool isGridSnapping_;
 
     double highlightColorRatio_;
     double highlightAlphaRatio_;
     double selectColorRatio_;
     double selectAlphaRatio_;
+    double surfaceScaleFactor_;
+    double gridSizeMM_;
+    double gridSize_;
 
     double pasteDeltaX_;
     double pasteDeltaY_;
 
     QRectF selectedGeometry_;
     QPointF mousePastePosition_;
+
+    VPaint::SurfaceType surfaceType_;
+    QColor surfaceBackGroundColor_;
+    QColor surfaceBorderColor_;
+    QColor gridColor_;
+
+    QList<QPointF> surfaceVertices_;
+
+    QList<QPair<QPointF, QPointF>> gridLines_;
+    QVector<double> gridHorizontalValues_;
+    QVector<double> gridVerticalValues_;
+
+    void updateSurfaceVertices();
+    void updateGrid();
 };
 
 class Q_VPAINT_EXPORT ToolModeAction: public QAction
