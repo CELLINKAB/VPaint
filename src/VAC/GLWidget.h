@@ -177,6 +177,8 @@ public:
     void zoomOut(const double zoomRatio = 0.8);
     void zoomInCenter(const double zoomRatio = 0.8);
     void zoomOutCenter(const double zoomRatio = 0.8);
+    void setZoom2D(const double zoom = 1.0, const double positionRatio = 1.0);
+    void setZoom2DCenter(const double zoom = 1.0);
 
 
 protected slots:
@@ -271,6 +273,12 @@ private:
     friend class GLUtils;
     static GLWidget * currentGLWidget_;
     QMouseEvent mouse_tabletEventToMouseEvent_;
+
+    void emitViewChanged(int x, int y);
+
+    QPoint lastViewChangedPos_;
+    QPointF lastCameraPos_;
+
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

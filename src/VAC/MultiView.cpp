@@ -110,6 +110,8 @@ View * MultiView::createView_()
     connect(view, SIGNAL(viewChanged(int,int)), this, SIGNAL(cameraChanged()));
     connect(view, SIGNAL(viewResized()), this, SIGNAL(cameraChanged()));
     connect(view, SIGNAL(settingsChanged()), this, SIGNAL(settingsChanged()));
+    connect(view, &View::viewChanged, this, &MultiView::zoomChanged);
+    connect(view, &View::viewResized, this, &MultiView::viewResized);
 
     return view;
 }
@@ -347,6 +349,20 @@ void MultiView::splitHorizontal()
 int MultiView::numViews() const
 {
     return views_.size();
+}
+
+void MultiView::setZoom2D(const double zoom, const double positionRatio)
+{
+    if (activeView_) {
+        activeView_->setZoom2D(zoom, positionRatio);
+    }
+}
+
+void MultiView::setZoom2DCenter(const double zoom)
+{
+    if (activeView_) {
+        activeView_->setZoom2DCenter(zoom);
+    }
 }
 
 void MultiView::splitClose()
