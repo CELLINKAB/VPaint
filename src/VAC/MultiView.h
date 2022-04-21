@@ -47,6 +47,8 @@ public:
     View * hoveredView() const;
     double zoom() const;
     int numViews() const;
+    void setZoom2D(const double zoom = 1.0, const double positionRatio = 1.0);
+    void setZoom2DCenter(const double zoom = 1.0);
 
     void setActiveView(View * view);
     void showSettingsWidget(bool isShow);
@@ -80,6 +82,8 @@ signals:
     void activeViewChanged();
     void hoveredViewChanged();
     void cameraChanged();
+    void zoomChanged();
+    void viewResized();
     void settingsChanged();
     void keyPressed(QKeyEvent* event);
     void keyReleased(QKeyEvent* event);
