@@ -70,7 +70,7 @@ GLWidget::GLWidget(QWidget *parent, bool isOnly2D) :
     fpstimerCount_(0),
 
     mouse_tabletEventToMouseEvent_(QEvent::MouseButtonPress, QPoint(), Qt::LeftButton, Qt::NoButton, Qt::NoModifier),
-    lastViewChangedPos_{0.0, 0.0},
+    lastViewChangedPos_{0, 0},
     lastCameraPos_{0.0, 0.0}
 {
     // To grab keyboard focus when user clicks
