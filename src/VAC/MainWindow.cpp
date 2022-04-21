@@ -432,6 +432,7 @@ void MainWindow::undo()
     if(undoIndex_>0)
     {
         goToUndoIndex_(undoIndex_ - 1);
+        emit undoCompleted(scene_->activeLayer()->name());
     }
     else
     {
@@ -444,6 +445,7 @@ void MainWindow::redo()
     if(undoIndex_<undoStack_.size()-1)
     {
         goToUndoIndex_(undoIndex_ + 1);
+        emit redoCompleted(scene_->activeLayer()->name());
     }
     else
     {
