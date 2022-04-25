@@ -162,6 +162,7 @@ public:
     void prepareDragAndDrop(double x0, double y0, Time time);
     void performDragAndDrop(double x, double y);
     void completeDragAndDrop(bool emitCheckpoint = true);
+    const KeyVertexSet& draggedVertices() const;
 
     // -- Transform selection --
     void beginTransformSelection(double x0, double y0, Time time);
@@ -220,6 +221,8 @@ public:
 
     void assignShapeID(Cell* cell);
     void endDrawShape();
+
+    QPointF dragStartPosition() const;
 
     /////////////////////////////////////////////////////////////////
     //                 MOUSE CLIC ACTIONS                          //

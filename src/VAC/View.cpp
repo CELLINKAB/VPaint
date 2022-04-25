@@ -84,9 +84,12 @@ View::View(VPaint::Scene * scene, QWidget * parent) :
     scene_(scene),
     pickingImg_(0),
     pickingIsEnabled_(true),
+    isMouseInSurface_(true),
     currentAction_(0),
     shapeStartX_(0),
     shapeStartY_(0),
+    lastDragX_(0.0),
+    lastDragY_(0.0),
     vac_(0)
 {
     // View settings widget
@@ -542,6 +545,9 @@ void View::MoveEvent(double x, double y)
     bool mustRedraw = false;
     global()->setSceneCursorPos(Eigen::Vector2d(x,y));
 
+    //isMouseInSurface_ = global()->isPointInSurface(x, y);
+    //update();
+
     // Update highlighted object
     bool hoveredObjectChanged = updateHoveredObject(mouse_Event_X_, mouse_Event_Y_);
     if(hoveredObjectChanged)
@@ -613,6 +619,9 @@ void View::PMRPressEvent(int action, double x, double y)
     // for mouse PMR actions
     global()->setSceneCursorPos(Eigen::Vector2d(x,y));
 
+    if (!isMouseInSurface_)
+        return;
+
     if(action==SKETCH_ACTION)
     {
         // here, possibly,  the scene  has several layers  that it
@@ -641,6 +650,8 @@ void View::PMRPressEvent(int action, double x, double y)
     }
     else if(action==DRAG_AND_DROP_ACTION)
     {
+        lastDragX_ = x;
+        lastDragY_ = y;
         vac_->prepareDragAndDrop(mouse_PressEvent_XScene_, mouse_PressEvent_YScene_, interactiveTime());
     }
     else if(action==TRANSFORM_SELECTION_ACTION)
@@ -755,7 +766,30 @@ void View::PMRMoveEvent(int action, double x, double y)
 
     if(action==DRAG_AND_DROP_ACTION)
     {
+        auto delta = QPointF(x - lastDragX_, y - lastDragY_);
+
+        for (auto vertex : vac_->draggedVertices())
+        {
+            const auto vx = vertex->pos()[0];
+            const auto vy = vertex->pos()[1];
+            if (!global()->isPointInSurface(vx + delta.x(), vy + delta.y()))
+            {
+                delta *= 0.9;
+                while (!global()->isPointInSurface(vx + delta.x(), vy + delta.y()) && (delta.x() > 1 || delta.y() > 1))
+                {
+                    delta *= 0.9;
+                }
+                qDebug() << "----------- delta:" << delta << "target:" << lastDragX_ + delta.x() << lastDragY_ + delta.y();
+//                vac_->performDragAndDrop(lastDragX_ + delta.x(), lastDragY_ + delta.y());
+                QMouseEvent event(QEvent::MouseButtonRelease, QPoint(lastDragX_, lastDragX_), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                qApp->sendEvent(this, &event);
+                return;
+            }
+        }
+
         vac_->performDragAndDrop(x, y);
+        lastDragX_ = x;
+        lastDragY_ = y;
     }
     else if(action==TRANSFORM_SELECTION_ACTION)
     {
@@ -1514,24 +1548,27 @@ void View::drawScene()
 {
     if(!mouse_HideCursor_)
     {
-        setCursor(Qt::ArrowCursor);
         switch(global()->toolMode())
         {
         case Global::SELECT:
             setCursor(Qt::ArrowCursor);
             break;
         case Global::SKETCH:
-        case Global::DRAW_LINE:
-            setCursor(Qt::CrossCursor);
-            break;
         case Global::PAINT:
-            setCursor(Qt::CrossCursor);
-            break;
         case Global::SCULPT:
-            setCursor(Qt::CrossCursor);
+        case Global::DRAW_LINE:
+        case Global::DRAW_RECTANGLE:
+        case Global::DRAW_CIRCLE:
+        case Global::DRAW_TRIANGLE:
+        case Global::DRAW_RHOMBUS:
+        case Global::DRAW_PENTAGON:
+        case Global::DRAW_HEXAGON:
+        case Global::DRAW_HEPTAGON:
+        case Global::DRAW_OCTAGON:
+            setCursor(isMouseInSurface_ ? Qt::CrossCursor : Qt::ArrowCursor);
             break;
         default:
-            setCursor(Qt::CrossCursor);
+            setCursor(Qt::ArrowCursor);
             break;
         }
     }

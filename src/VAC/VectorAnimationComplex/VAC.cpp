@@ -2124,6 +2124,11 @@ void VAC::endDrawShape()
     lastShapeID_ ++;
 }
 
+QPointF VAC::dragStartPosition() const
+{
+    return QPointF(x0_, y0_);
+}
+
 bool VAC::cutFace_(KeyFace * face, KeyEdge * edge, CutFaceFeedback * feedback)
 {
     // assumes edge is not a loop
@@ -6774,6 +6779,11 @@ void VAC::completeDragAndDrop(bool emitCheckpoint)
     if (emitCheckpoint) {
         emit checkpoint();
     }
+}
+
+const KeyVertexSet& VAC::draggedVertices() const
+{
+    return draggedVertices_;
 }
 
 void VAC::beginTransformSelection(double x0, double y0, Time time)

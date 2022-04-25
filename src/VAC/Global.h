@@ -204,6 +204,8 @@ public:
     QPointF getSnappedPosition(double x, double y);
     QPointF getSnappedPosition(const QPointF& pos);
 
+    bool isPointInSurface(const double x, const double y) const;
+
     // Display modes
     enum DisplayMode {
         ILLUSTRATION,
@@ -377,6 +379,7 @@ private:
 
     QRectF selectedGeometry_;
     QPointF mousePastePosition_;
+    QPointF sceneCenterPosition_;
 
     VPaint::SurfaceType surfaceType_;
     QColor surfaceBackGroundColor_;

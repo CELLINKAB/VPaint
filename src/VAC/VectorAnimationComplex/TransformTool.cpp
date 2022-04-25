@@ -405,7 +405,8 @@ TransformTool::TransformTool(QObject * parent) :
     draggingManualPivot_(false),
     dragAndDropping_(false),
     transforming_(false),
-    rotating_(false)
+    rotating_(false),
+    startTransformTime_{}
 {
     if (global()) {
       connect(global(), SIGNAL(keyboardModifiersChanged()), this, SLOT(onKeyboardModifiersChanged()));
@@ -817,6 +818,7 @@ namespace
 
 void TransformTool::beginTransform(double x0, double y0, Time time)
 {
+    startTransformTime_ = time;
     // Clear cached values
     draggedVertices_.clear();
     draggedEdges_.clear();

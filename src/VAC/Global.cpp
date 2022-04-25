@@ -1049,6 +1049,8 @@ void Global::setSurfaceScaleFactor(double scaleFactor)
 {
     surfaceScaleFactor_ = scaleFactor;
     gridSize_ = gridSizeMM_ * scaleFactor;
+    sceneCenterPosition_.setX(scene()->left() + scene()->width() / 2);
+    sceneCenterPosition_.setY(scene()->top() + scene()->height() / 2);
 }
 
 void Global::setGridSize(double gridSizeMM)
@@ -1121,6 +1123,14 @@ QPointF Global::getSnappedPosition(const QPointF& pos)
     auto yRes = pos.y();
     calculateSnappedPosition(xRes, yRes);
     return QPointF(xRes, yRes);
+}
+
+bool Global::isPointInSurface(const double x, const double y) const
+{
+    const auto distanceToCenter = sqrt((x - sceneCenterPosition_.x()) * (x - sceneCenterPosition_.x()) +
+            (y - sceneCenterPosition_.y()) * (y - sceneCenterPosition_.y()));
+
+    return distanceToCenter <= scene()->width() / 2;
 }
 
 bool Global::useTabletPressure() const

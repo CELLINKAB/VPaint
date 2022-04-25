@@ -189,6 +189,7 @@ private:
     uchar *pickingImg_;
     Picking::Object hoveredObject_;
     bool pickingIsEnabled_;
+    bool isMouseInSurface_;
 
     // PMR mouse event temp variables
     int currentAction_;
@@ -201,6 +202,9 @@ private:
 
     double shapeStartX_;
     double shapeStartY_;
+
+    double lastDragX_;
+    double lastDragY_;
 
     VectorAnimationComplex::CellSet lastDrawnCells_;
 

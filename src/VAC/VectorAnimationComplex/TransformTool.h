@@ -161,6 +161,7 @@ private:
     double x0_, y0_, dx_, dy_, x_, y_;
     BoundingBox bb0_, obb0_;
     double dTheta_;
+    Time startTransformTime_;
 };
 
 }
