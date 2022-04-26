@@ -392,9 +392,12 @@ void Scene::drawPick(Time time, ViewSettings & viewSettings)
 void Scene::setHoveredObject(Time time, int index, int id)
 {
     setNoHoveredObject();
-    indexHovered_ = index;
-    layers_[index]->setHoveredObject(time, id);
-    layers_[index]->vac()->hoveverShape();
+    indexHovered_ = index >= 0 && index < numLayers() ? index : -1;
+    if(indexHovered_ != -1)
+    {
+        layers_[index]->setHoveredObject(time, id);
+        layers_[index]->vac()->hoveverShape();
+    }
 }
 
 void Scene::setNoHoveredObject()
@@ -902,7 +905,7 @@ void Scene::moveActiveLayerDown()
 void Scene::destroyActiveLayer()
 {
     int i = activeLayerIndex_;
-    if(1 <= i && i < numLayers())
+    if(0 <= i && i < numLayers())
     {
         deselectAll();
 
@@ -920,6 +923,7 @@ void Scene::destroyActiveLayer()
         {
             // was the bottom-most layer
             activeLayerIndex_ = 0;
+            activeLayer()->background()->setOpacity(1.0);
         }
         else
         {
