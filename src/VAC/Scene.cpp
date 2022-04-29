@@ -42,7 +42,10 @@ Scene::Scene() :
     left_(0),
     top_(0),
     width_(1280),
-    height_(720)
+    height_(720),
+    isUseConsistentLayerHeight_(true),
+    consistentLayerHeight_(-1.0),
+    firstLayerHeightPercents_(-1.0)
 {
     indexHovered_ = -1;
 }
@@ -290,6 +293,7 @@ void Scene::readCanvas(XmlStreamReader & xml)
         setLeft(list[0].toDouble());
         setTop(list[1].toDouble());
     }
+
     if(xml.attributes().hasAttribute("size"))
     {
         QString stringsize = xml.attributes().value("size").toString();
@@ -298,6 +302,22 @@ void Scene::readCanvas(XmlStreamReader & xml)
         setHeight(list[1].toDouble());
     }
 
+    if (xml.attributes().hasAttribute("useConsistentLayerHeight"))
+    {
+        isUseConsistentLayerHeight_ = xml.attributes().value("useConsistentLayerHeight").toInt();
+    }
+
+    if (xml.attributes().hasAttribute("consistentLayerHeight"))
+    {
+        consistentLayerHeight_ = xml.attributes().value("consistentLayerHeight").toDouble();
+    }
+
+    if (xml.attributes().hasAttribute("firstLayerHeightPercents"))
+    {
+        firstLayerHeightPercents_ = xml.attributes().value("firstLayerHeightPercents").toDouble();
+    }
+
+
     xml.skipCurrentElement();
 }
 
@@ -305,6 +325,9 @@ void Scene::writeCanvas(XmlStreamWriter & xml)
 {
     xml.writeAttribute("position", QString().setNum(left()) + " " + QString().setNum(top()));
     xml.writeAttribute("size", QString().setNum(width()) + " " + QString().setNum(height()));
+    xml.writeAttribute("useConsistentLayerHeight", QString().setNum(isUseConsistentLayerHeight()));
+    xml.writeAttribute("consistentLayerHeight", QString().setNum(consistentLayerHeight()));
+    xml.writeAttribute("firstLayerHeightPercents", QString().setNum(firstLayerHeightPercents()));
 }
 
 void Scene::relativeRemap(const QDir & oldDir, const QDir & newDir)
@@ -740,6 +763,23 @@ QList<ShapeType>Scene::getActiveLayerShapesType()
         shapesType =  layer->vac()->getAllShapesType();
     }
     return shapesType;
+}
+
+void Scene::setUseConsistentLayerHeight(bool useConsistentHeight)
+{
+    isUseConsistentLayerHeight_ = useConsistentHeight;
+}
+
+void Scene::setConsistentLayerHeight(const qreal height)
+{
+    consistentLayerHeight_ = height;
+}
+
+void Scene::setFirstLayerHeightPercents(const qreal percents)
+{
+    if (percents >= 0 && percents <= 100) {
+        firstLayerHeightPercents_ = percents;
+    }
 }
 
 void Scene::deleteSelectedCells()

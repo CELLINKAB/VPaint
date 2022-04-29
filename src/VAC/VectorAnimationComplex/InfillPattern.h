@@ -33,7 +33,7 @@ public:
 
     [[nodiscard]] Pattern pattern() const;
     void setPattern(InfillPattern::Pattern pattern);
-    [[nodiscard]] bool applyInfill() const;
+    [[nodiscard]] bool isApplyInfill() const;
     void setApplyInfill(bool apply);
     [[nodiscard]] int density() const;
     void setDensity(double density);

@@ -429,13 +429,13 @@ void InfillPattern::update(QPolygonF &polygon)
     inset_ = insetPolygon(polygon, insetDistance_);
     inputPolygon_ = polygon;
     switch (pattern_) {
-        case Pattern::None:
-            break;
-        case Pattern::Grid:
-            gridInfill();
-            break;
-        case Pattern::RectiLinear: {
-            rectiLinearVerticalInfill();
+    case Pattern::None:
+        break;
+    case Pattern::Grid:
+        gridInfill();
+        break;
+    case Pattern::RectiLinear: {
+        rectiLinearVerticalInfill();
             break;
         }
         case Pattern::Concentric:
@@ -494,7 +494,7 @@ void InfillPattern::setPattern(InfillPattern::Pattern pattern)
     pattern_ = pattern;
 }
 
-bool InfillPattern::applyInfill() const
+bool InfillPattern::isApplyInfill() const
 {
     return applyInfill_;
 }

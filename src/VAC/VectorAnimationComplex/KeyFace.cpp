@@ -392,7 +392,7 @@ void KeyFace::setCycles(const QList<Cycle> & cycles)
     addCycles(cycles);
 }
 
-InfillPattern KeyFace::infill() const
+const InfillPattern& KeyFace::infill() const
 {
     return infillPattern_;
 }
@@ -411,7 +411,7 @@ void KeyFace::setInfillPattern(InfillPattern::Pattern pattern)
 
 void KeyFace::drawInfill()
 {
-        infillPattern_.draw();
+    infillPattern_.draw();
 }
 
 void KeyFace::addCycles(const QList<Cycle> & cycles)
@@ -474,6 +474,10 @@ void KeyFace::write_(XmlStreamWriter & xml) const
         cyclesstring += cycles_[i].toString();
     }
     xml.writeAttribute("cycles", cyclesstring);
+
+    xml.writeAttribute("InfillApply", QString::number(infillPattern_.isApplyInfill()));
+    xml.writeAttribute("InfillPattern", QString::number(static_cast<uint8_t>(infillPattern_.pattern())));
+    xml.writeAttribute("InfillDensity", QString::number(infillPattern_.density()));
 }
 
 KeyFace::KeyFace(VAC * vac, XmlStreamReader & xml) :
@@ -500,6 +504,10 @@ KeyFace::KeyFace(VAC * vac, XmlStreamReader & xml) :
             str.clear();
         }
     }
+
+    infillPattern_.setApplyInfill(xml.attributes().value("InfillApply").toInt());
+    infillPattern_.setPattern(static_cast<InfillPattern::Pattern>(xml.attributes().value("InfillPattern").toUInt()));
+    infillPattern_.setDensity(xml.attributes().value("InfillDensity").toInt());
 }
 
 void KeyFace::save_(QTextStream & out)
@@ -622,6 +630,7 @@ KeyFace::KeyFace(KeyFace * other) :
     }
 
     cycles_ = other->cycles_;
+    infillPattern_= other->infillPattern_;
 }
 
 bool KeyFace::check_() const

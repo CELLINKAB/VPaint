@@ -1365,10 +1365,13 @@ void VAC::smartDelete_(const CellSet & cellsToDelete)
 QList<ShapeType> VAC::getAllShapesType()
 {
     QList<ShapeType> types;
-    KeyFaceSet keyVertices = faces();
-    for( auto vertex : keyVertices)
+    KeyFaceSet keyFaces = faces();
+    for (auto face : keyFaces)
     {
-        types.append(vertex->shapeType());
+        if (!face->isIgnored())
+        {
+            types.append(face->shapeType());
+        }
     }
     return types;
 }

@@ -723,6 +723,7 @@ void Global::setToolMode(Global::ToolMode mode)
 
 void Global::updateStatusBarHelp()
 {
+    return;
     Qt::KeyboardModifiers keys = keyboardModifiers();
     bool isCtrlDown = keys & Qt::ControlModifier;
     bool isShiftDown = keys & Qt::ShiftModifier;

@@ -75,6 +75,9 @@ public:
     qreal layerHeight() const;
     void setLayerHeight(qreal height);
 
+    inline qreal absoluteLayerHeight() const { return absoluteLayerHeight_; }
+    void setAbsoluteLayerHeight(const qreal height);
+
 signals:
     // defined in base class (Scene Object)
     // void changed();
@@ -93,6 +96,7 @@ private:
     QString name_;
     bool isVisible_;
     qreal layerHeight_;
+    qreal absoluteLayerHeight_;
 };
 
 #endif
