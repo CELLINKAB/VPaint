@@ -21,7 +21,7 @@
 #include "XmlStreamReader.h"
 #include "XmlStreamWriter.h"
 
-Layer::Layer(NoInit_) : absoluteLayerHeight_(-1.0)
+Layer::Layer(NoInit_)
 {
 
 }
@@ -49,8 +49,7 @@ void Layer::init_(
     connect(vac_, SIGNAL(selectionChanged()), this, SIGNAL(selectionChanged()));
 }
 
-Layer::Layer(const QString & layerName, qreal layerHeight) :
-    absoluteLayerHeight_(-1.0)
+Layer::Layer(const QString & layerName, qreal layerHeight)
 {
     init_(new Background(this),
           new VectorAnimationComplex::VAC(),

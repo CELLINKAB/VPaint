@@ -95,8 +95,8 @@ private:
     VectorAnimationComplex::VAC * vac_;
     QString name_;
     bool isVisible_;
-    qreal layerHeight_;
-    qreal absoluteLayerHeight_;
+    qreal layerHeight_ = 0.0;
+    qreal absoluteLayerHeight_ = -1.0;
 };
 
 #endif
