@@ -15,15 +15,18 @@ void InfillPattern::rectiLinearVerticalInfill()
     const auto endBoundary = outerBoundingBox.right();
     const auto top = outerBoundingBox.top();
     const auto bottom = outerBoundingBox.bottom();
+    const auto insetTop = inset_.boundingRect().top();
+    const auto insetBottom = inset_.boundingRect().bottom();
+
     auto up = true;
 
     for (auto x = startBoundary; x <= endBoundary; x += spacing_) {
         auto potentialTopPoint = QPointF{x, top};
-        while(!inset_.containsPoint(potentialTopPoint, Qt::OddEvenFill) && potentialTopPoint.y() <= bottom) {
+        while((!inset_.containsPoint(potentialTopPoint, Qt::OddEvenFill) || qFuzzyCompare(potentialTopPoint.y(), insetTop)) && potentialTopPoint.y() <= bottom) {
             potentialTopPoint += QPointF{0, 1};
         }
         auto potentialBottomPoint = QPointF{x, bottom};
-        while(!inset_.containsPoint(potentialBottomPoint, Qt::OddEvenFill) && potentialBottomPoint.y() >= top) {
+        while((!inset_.containsPoint(potentialBottomPoint, Qt::OddEvenFill) || qFuzzyCompare(potentialBottomPoint.y(), insetBottom)) && potentialBottomPoint.y() >= top) {
             potentialBottomPoint -= QPointF{0, 1};
         }
 
@@ -126,14 +129,16 @@ void InfillPattern::gridInfill()
     const auto endBoundary = outerBoundingBox.right();
     const auto top = outerBoundingBox.top();
     const auto bottom = outerBoundingBox.bottom();
+    const auto insetTop = inset_.boundingRect().top();
+    const auto insetBottom = inset_.boundingRect().bottom();
 
     for (auto x = startBoundary; x <= endBoundary; x += spacing_) {
         auto potentialTopPoint = QPointF{x, top};
-        while(!inset_.containsPoint(potentialTopPoint, Qt::OddEvenFill) && potentialTopPoint.y() <= bottom) {
+        while((!inset_.containsPoint(potentialTopPoint, Qt::OddEvenFill) || qFuzzyCompare(potentialTopPoint.y(), insetTop)) && potentialTopPoint.y() <= bottom) {
             potentialTopPoint += QPointF{0, 1};
         }
         auto potentialBottomPoint = QPointF{x, bottom};
-        while(!inset_.containsPoint(potentialBottomPoint, Qt::OddEvenFill) && potentialBottomPoint.y() >= top) {
+        while((!inset_.containsPoint(potentialBottomPoint, Qt::OddEvenFill) || qFuzzyCompare(potentialBottomPoint.y(), insetBottom)) && potentialBottomPoint.y() >= top) {
             potentialBottomPoint -= QPointF{0, 1};
         }
 
@@ -166,17 +171,19 @@ void InfillPattern::linearInfill()
     const auto outerBoundingBox = inputPolygon_.boundingRect();
     const auto top = outerBoundingBox.top();
     const auto bottom = outerBoundingBox.bottom();
+    const auto insetTop = inset_.boundingRect().top();
+    const auto insetBottom = inset_.boundingRect().bottom();
 
     const auto startPositionX = outerBoundingBox.left() + outerBoundingBox.width() / 2;
     const auto startPositionY = outerBoundingBox.top() + outerBoundingBox.height() / 2;
 
     auto potentialTopPoint = QPointF{startPositionX, startPositionY};
-    while(inset_.containsPoint(potentialTopPoint, Qt::OddEvenFill) && potentialTopPoint.y() >= top) {
+    while((inset_.containsPoint(potentialTopPoint, Qt::OddEvenFill) || qFuzzyCompare(potentialTopPoint.y(), insetTop)) && potentialTopPoint.y() >= top) {
         potentialTopPoint += QPointF{0.7, -0.7};
     }
     potentialTopPoint -= QPointF{0.7, -0.7};
     auto potentialBottomPoint = QPointF{startPositionX, startPositionY};
-    while(inset_.containsPoint(potentialBottomPoint, Qt::OddEvenFill) && potentialBottomPoint.y() <= bottom) {
+    while((inset_.containsPoint(potentialBottomPoint, Qt::OddEvenFill)  || qFuzzyCompare(potentialBottomPoint.y(), insetBottom)) && potentialBottomPoint.y() <= bottom) {
         potentialBottomPoint += QPointF{-0.7, 0.7};
     }
     potentialBottomPoint -= QPointF{-0.7, 0.7};
@@ -284,6 +291,8 @@ void InfillPattern::gyroidInfill()
     const auto endBoundary = outerBoundingBox.right();
     const auto top = outerBoundingBox.top();
     const auto bottom = outerBoundingBox.bottom();
+    const auto insetTop = inset_.boundingRect().top();
+    const auto insetBottom = inset_.boundingRect().bottom();
     auto up = true;
 
     auto phaseIncrement = 1;
@@ -293,7 +302,7 @@ void InfillPattern::gyroidInfill()
             for (auto y = bottom; y >= top; y -= decrementWith) {
                 const auto potentialX = x + (spacing_ / 4) * sin((y - phaseIncrement * spacing_ / 4) * 4 / spacing_);
                 auto potentialPoint = QPointF{potentialX, y};
-                if (inset_.containsPoint(potentialPoint, Qt::OddEvenFill)) {
+                if (inset_.containsPoint(potentialPoint, Qt::OddEvenFill)  && !qFuzzyCompare(potentialPoint.y(), insetTop) && !qFuzzyCompare(potentialPoint.y(), insetBottom)) {
                     infillPoints << potentialPoint;
                 }
             }
@@ -301,7 +310,7 @@ void InfillPattern::gyroidInfill()
             for (auto y = top; y <= bottom; y += decrementWith) {
                 const auto potentialX = x + (spacing_ / 4) * sin((y - phaseIncrement * spacing_ / 4) * 4 / spacing_);
                 auto potentialPoint = QPointF{potentialX, y};
-                if (inset_.containsPoint(potentialPoint, Qt::OddEvenFill)) {
+                if (inset_.containsPoint(potentialPoint, Qt::OddEvenFill) && !qFuzzyCompare(potentialPoint.y(), insetTop) && !qFuzzyCompare(potentialPoint.y(), insetBottom)) {
                     infillPoints << potentialPoint;
                 }
             }
