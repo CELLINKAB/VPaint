@@ -74,7 +74,7 @@ namespace {
 const constexpr auto CIRCLE_VERTICES = 40;
 const constexpr auto POLYGON_ARROUND_VERTICES_FROM = 4;
 const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
-const constexpr auto POLYGON_ARROUND_ALPHA = 60;
+const constexpr auto POLYGON_ARROUND_ALPHA = 0;
 const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
 }
 
