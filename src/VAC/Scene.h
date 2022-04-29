@@ -145,6 +145,16 @@ public:
     void setInfillDensityForSelectedCells(int density);
     void setInfillPatternForSelectedCells(InfillPattern::Pattern pattern);
     QList<ShapeType> getActiveLayerShapesType();
+
+    bool inline isUseConsistentLayerHeight() const { return isUseConsistentLayerHeight_; }
+    void setUseConsistentLayerHeight(bool useConsistentHeight);
+
+    inline qreal consistentLayerHeight() const { return consistentLayerHeight_; }
+    void setConsistentLayerHeight(const qreal height);
+
+    inline qreal firstLayerHeightPercents() const { return firstLayerHeightPercents_; }
+    void setFirstLayerHeightPercents(const qreal percents);
+
 public slots:
     // --------- Tools ----------
     void test();
@@ -238,6 +248,9 @@ private:
     double top_;
     double width_;
     double height_;
+    bool isUseConsistentLayerHeight_;
+    qreal consistentLayerHeight_;
+    qreal firstLayerHeightPercents_;
 };
 }
     

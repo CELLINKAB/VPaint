@@ -59,10 +59,7 @@ VertexCell::VertexCell(VAC * vac, QTextStream & in) :
 VertexCell::VertexCell(VAC * vac, XmlStreamReader & xml) :
     Cell(vac, xml)
 {
-    colorSelected_[0] = 0.7;
-    colorSelected_[1] = 0;
-    colorSelected_[2] = 0;
-    colorSelected_[3] = 1;
+    // Using colors from stored xml
 }
 
 bool VertexCell::isPickableCustom(Time /*time*/) const

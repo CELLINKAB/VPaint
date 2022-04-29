@@ -74,7 +74,7 @@ namespace {
 const constexpr auto CIRCLE_VERTICES = 40;
 const constexpr auto POLYGON_ARROUND_VERTICES_FROM = 4;
 const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
-const constexpr auto POLYGON_ARROUND_ALPHA = 60;
+const constexpr auto POLYGON_ARROUND_ALPHA = 0;
 const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
 }
 
@@ -1140,6 +1140,7 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
             auto edge = keyEdges.last();
             vertex1->setShapeType(ShapeType::CURVE);
             vertex2->setShapeType(ShapeType::CURVE);
+            edge->setShapeType(ShapeType::CURVE);
             lastDrawnCells_ << vertex1;
             lastDrawnCells_ << vertex2;
             lastDrawnCells_ <<  edge;
@@ -1153,8 +1154,12 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
                 faceCell->setShapeType(ShapeType::CURVE);
                 vac_->addToSelection(faceCell);
                 lastDrawnCells_ << faceCell;
-                lastDrawnCells_ << vac_->instantEdges().last();
-            }
+                // An one more edge has been created after the face has created
+                // It connects the start and end vetices and we can ignore it
+                auto lastEdge = vac_->instantEdges().last();
+                lastEdge->setShapeType(ShapeType::CURVE);
+                lastEdge->setIgnored(true);
+                lastDrawnCells_ << lastEdge;            }
             endDrawShape();
             scene()->emitShapeDrawn(ShapeType::CURVE);
         }
@@ -1195,7 +1200,7 @@ void View::drawCircle(double x, double y, ShapeDrawPhase drawPhase)
     {
         //Draw circle as polygon
         drawShape(x, y, ShapeType::POLYGON, CIRCLE_VERTICES, 0, true);
-//        drawShape(x, y, ShapeType::CIRCLE);
+//        drawShape(x, y, ShapeType::CIRCLE, CIRCLE_VERTICES);
         break;
     }
     case ShapeDrawPhase::DRAW_END:
@@ -1288,22 +1293,14 @@ void View::drawPolygon(double x, double y, int countAngles, double rotation, Sha
                 const auto newY = yCenter + ry * sin(angle);
                 vac_->continueSketchEdge(newX, newY, POLYGON_ARROUND_LINE_SIZE);
             }
-//            vac_->continueSketchEdge(xCenter + rx, yCenter, POLYGON_ARROUND_LINE_SIZE);
             vac_->endSketchEdge(false);
 
-            QList<VectorAnimationComplex::Cell*> boundingCells;
-            boundingCells << vac_->instantVertices().last();
-            boundingCells << vac_->instantVertices().at(vac_->instantVertices().count() - 2);
-            boundingCells << vac_->instantEdges().last();
-
-            for (auto cell : boundingCells)
-            {
-                cell->setIgnored(true);
-                vac_->assignShapeID(cell);
-                cell->setColor(boundingColor);
-                cell->setHighlightedColor(boundingColor);
-                cell->setSelectedColor(boundingColor);
-            }
+            auto keyEdge = vac_->instantEdges().last();
+            keyEdge->setIgnored(true);
+            vac_->assignShapeID(keyEdge);
+            keyEdge->setColor(boundingColor);
+            keyEdge->setHighlightedColor(boundingColor);
+            keyEdge->setSelectedColor(boundingColor);
         }
         endDrawShape();
         scene()->emitShapeDrawn(ShapeType::POLYGON);
@@ -1426,39 +1423,30 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
     }
     case ShapeType::CIRCLE:
     {
-        const auto radiusH = shapeHeight / 2;
-        const auto radiusW = shapeWidth / 2;
-
-        const auto centerX = (leftX + rightX) / 2;
-        const auto centerY = (topY + bottomY) / 2;
-
-        const auto startX = centerX + radiusW;
-        const auto startY = centerY;
-        const auto angleStep = M_PI / 50;
-
-        vac_->beginSketchEdge(startX, startY, w, interactiveTime());
-        for (auto angle = 0.0; angle <= M_PI * 2; angle += angleStep)
+        const auto rx = shapeWidth / 2;
+        const auto ry = shapeHeight / 2;
+        const auto xCenter = leftX + rx;
+        const auto yCenter = topY + ry;
+        vac_->beginSketchEdge(xCenter + rx, yCenter, w, interactiveTime());
+        for (auto i = 0; i <= countAngles; i++)
         {
-            const auto newX = centerX + radiusW * cos(angle);
-            const auto newY = centerY + radiusH * sin(angle);
-            vac_->continueSketchEdge(newX, newY, w);
+            auto angle = 2 * M_PI * i / countAngles;
+            auto pos = QPointF(rx * cos(angle) + xCenter, ry * sin(angle) + yCenter);
+            vac_->continueSketchEdge(pos.x(), pos.y(), w);
         }
         vac_->endSketchEdge(false);
-        lastDrawnCells_ << vac_->instantVertices().last();
-        lastDrawnCells_ <<  vac_->instantEdges().last();
+        auto keyEdge = vac_->instantEdges().last();
+        keyEdge->setShapeType(shapeType);
+        lastDrawnCells_ << keyEdge;
 
         if (global()->isDrawShapeFaceEnabled())
         {
-            for (auto cell : lastDrawnCells_)
-            {
-                vac_->addToSelection(cell, false);
-            }
+            vac_->addToSelection(keyEdge, false);
             scene()->createFace(false);
             auto faceCell = vac_->faces().last();
-            faceCell->setShapeType(shapeType);
             vac_->addToSelection(faceCell);
+            faceCell->setShapeType(shapeType);
             lastDrawnCells_ << faceCell;
-            endDrawShape();
         }
         break;
     }

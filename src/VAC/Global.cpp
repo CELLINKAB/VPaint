@@ -39,6 +39,7 @@
 
 namespace {
 const constexpr auto SURFACE_ROUND_VERTICES = 100;
+const constexpr auto IS_USED_STATUS_BAR = false;
 }
 
 // -------- Initialization --------
@@ -723,6 +724,9 @@ void Global::setToolMode(Global::ToolMode mode)
 
 void Global::updateStatusBarHelp()
 {
+    if (!IS_USED_STATUS_BAR)
+        return;
+
     Qt::KeyboardModifiers keys = keyboardModifiers();
     bool isCtrlDown = keys & Qt::ControlModifier;
     bool isShiftDown = keys & Qt::ShiftModifier;

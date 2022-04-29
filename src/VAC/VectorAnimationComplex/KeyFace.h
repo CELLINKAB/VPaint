@@ -66,7 +66,7 @@ public:
     //   - cells of cycles must belong to vac()
     void setCycles(const QList<Cycle> & cycles);
 
-    InfillPattern infill() const;
+    const InfillPattern& infill() const;
 
     void setInfillDensity(int density);
     void setInfillPattern(InfillPattern::Pattern pattern);
