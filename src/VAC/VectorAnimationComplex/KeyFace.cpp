@@ -570,7 +570,6 @@ void KeyFace::updateBoundary_impl(KeyEdge * oldEdge, const KeyEdgeList & newEdge
 {
     for(int i=0; i<cycles_.size(); ++i)
         cycles_[i].replaceEdges(oldEdge, newEdges);
-    updateInfill();
 }
 
 
@@ -579,14 +578,12 @@ void KeyFace::updateBoundary_impl(KeyVertex * oldVertex, KeyVertex * newVertex)
 {
     for(int i=0; i<cycles_.size(); ++i)
         cycles_[i].replaceVertex(oldVertex, newVertex);
-    updateInfill();
 }
 
 void KeyFace::updateBoundary_impl(const KeyHalfedge & oldHalfedge, const KeyHalfedge & newHalfedge)
 {
     for(int i=0; i<cycles_.size(); ++i)
         cycles_[i].replaceHalfedge(oldHalfedge, newHalfedge);
-    updateInfill();
 }
 
 void KeyFace::updateInfill()
