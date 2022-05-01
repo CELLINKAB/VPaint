@@ -6958,6 +6958,7 @@ void VAC::setInfillDensityForSelectedCells(int density)
     for (auto keyFace : keyFaces) {
         keyFace->setInfillDensity(density);
     }
+    emit checkpoint();
 }
 
 void VAC::setInfillPatternForSelectedCells(InfillPattern::Pattern pattern)
@@ -6969,6 +6970,7 @@ void VAC::setInfillPatternForSelectedCells(InfillPattern::Pattern pattern)
     for (auto keyFace : keyFaces) {
         keyFace->setInfillPattern(pattern);
     }
+    emit checkpoint();
 }
 
 void VAC::updateToBePaintedFace(double x, double y, Time time)
