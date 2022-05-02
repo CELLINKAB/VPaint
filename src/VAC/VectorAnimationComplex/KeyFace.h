@@ -87,13 +87,13 @@ public:
 
     void updateInfill();
 
-    QColor infillColor() const;
+    [[nodiscard]] QColor infillColor() const;
     void setIffillColor(const QColor& c);
 
-    QColor infillHighlightedColor() const;
+    [[nodiscard]] QColor infillHighlightedColor() const;
     void setInfillHighlightedColor(const QColor& c);
 
-    QColor infillSelectedColor() const;
+    [[nodiscard]] QColor infillSelectedColor() const;
     void setInfillSelectedColor(const QColor& c);
 
     void adjustInfillHighlightedColor(const double colorRatio, const double alphaRatio = 1.2);

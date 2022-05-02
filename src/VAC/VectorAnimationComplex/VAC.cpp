@@ -1970,14 +1970,14 @@ void VAC::changeEdgesColor()
         {
             auto ignoredColor = global()->edgeColor();
             ignoredColor.setAlpha(cell->color().alpha());
-            emitCheckpoint = emitCheckpoint ? true : ignoredColor != cell->color();
+            emitCheckpoint = emitCheckpoint || ignoredColor != cell->color();
             cell->setColor(ignoredColor);
             cell->setHighlightedColor(ignoredColor);
             cell->setSelectedColor(ignoredColor);
         }
         else if (auto keyEdge = cell->toKeyEdge())
         {
-            emitCheckpoint = emitCheckpoint ? true : edgeColor != keyEdge->color();
+            emitCheckpoint = emitCheckpoint || edgeColor != keyEdge->color();
             keyEdge->setColor(edgeColor);
             adjusSelectedAndHighlighted(keyEdge);
         }
@@ -1985,7 +1985,7 @@ void VAC::changeEdgesColor()
         {
             if (!global()->isShowVerticesOnSelection())
             {
-                emitCheckpoint = emitCheckpoint ? true : edgeColor != keyVertex->color();
+                emitCheckpoint = emitCheckpoint || edgeColor != keyVertex->color();
                 keyVertex->setColor(edgeColor);
                 adjusSelectedAndHighlighted(keyVertex);
             }
@@ -2006,7 +2006,7 @@ void VAC::changeFacesColor()
     {
         if (auto keyFace = cell->toKeyFace())
         {
-            emitCheckpoint = emitCheckpoint ? true : faceColor != keyFace->color();
+            emitCheckpoint = emitCheckpoint || faceColor != keyFace->color();
             keyFace->setColor(faceColor);
             adjusSelectedAndHighlighted(keyFace);
         }
@@ -2027,7 +2027,7 @@ void VAC::changeInfillColor()
     {
         if (auto keyFace = cell->toKeyFace())
         {
-            emitCheckpoint = emitCheckpoint ? true : infillColor != keyFace->infillColor();
+            emitCheckpoint = emitCheckpoint || infillColor != keyFace->infillColor();
             keyFace->setIffillColor(infillColor);
             keyFace->adjustInfillHighlightedColor(global()->highlightColorRatio(), global()->highlightAlphaRatio());
             keyFace->adjustInfillSelectedColor(global()->selectColorRatio(), global()->selectAlphaRatio());

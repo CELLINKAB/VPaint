@@ -76,7 +76,7 @@ const constexpr auto POLYGON_ARROUND_VERTICES_FROM = 4;
 const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
 const constexpr auto POLYGON_ARROUND_ALPHA = 0;
 const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
-const constexpr auto IS_DRAW_CIRCLES_AS_CURVES = false;
+const constexpr auto DRAW_CIRCLES_AS_CURVES = false;
 }
 
 View::View(VPaint::Scene * scene, QWidget * parent) :
@@ -1201,7 +1201,7 @@ void View::drawCircle(double x, double y, ShapeDrawPhase drawPhase)
     switch (drawPhase) {
     case ShapeDrawPhase::DRAW_PROCESS:
     {
-        if (IS_DRAW_CIRCLES_AS_CURVES) {
+        if (DRAW_CIRCLES_AS_CURVES) {
             // Draw circle using curved(will be enabled in future)
             // Now it's working fast but has some issues with infill
             drawShape(x, y, ShapeType::CIRCLE, CIRCLE_VERTICES);
