@@ -1042,6 +1042,13 @@ void VAC::read2ndPass_()
             kedge->correctGeometry();
         }
     }
+
+    for (auto face : qAsConst(cells_))
+    {
+        if (auto keyFace = face->toKeyFace()) {
+            keyFace->updateInfill();
+        }
+    }
 }
 
 void VAC::save_(QTextStream & out)
@@ -2008,6 +2015,28 @@ void VAC::changeFacesColor()
     if (emitCheckpoint)
     {
         checkPointTimer->stop();
+        checkPointTimer->start(5);
+    }
+}
+
+void VAC::changeInfillColor()
+{
+    auto emitCheckpoint = false;
+    auto infillColor = global()->infillColor();
+    for(auto cell : selectedCells())
+    {
+        if (auto keyFace = cell->toKeyFace())
+        {
+            emitCheckpoint = emitCheckpoint ? true : infillColor != keyFace->infillColor();
+            keyFace->setIffillColor(infillColor);
+            keyFace->adjustInfillHighlightedColor(global()->highlightColorRatio(), global()->highlightAlphaRatio());
+            keyFace->adjustInfillSelectedColor(global()->selectColorRatio(), global()->selectAlphaRatio());
+        }
+    }
+
+    if (emitCheckpoint)
+    {
+        checkPointTimer->stop();
         emit changed();
         emit checkpoint();
     }
@@ -2042,6 +2071,9 @@ void VAC::adjustSelectColors(Cell* cell)
     } else if (keyFace != nullptr) {
         colorChanged = colorChanged ? colorChanged : keyFace->color() != faceColor;
         keyFace->setColor(faceColor);
+        keyFace->setIffillColor(global()->infillColor());
+        keyFace->adjustInfillHighlightedColor(global()->highlightColorRatio(), global()->highlightAlphaRatio());
+        keyFace->adjustInfillSelectedColor(global()->selectColorRatio(), global()->selectAlphaRatio());
     } else {
         colorChanged = colorChanged ? colorChanged : cell->color() != edgeColor;
         cell->setColor(edgeColor);
@@ -6958,6 +6990,7 @@ void VAC::setInfillDensityForSelectedCells(int density)
     for (auto keyFace : keyFaces) {
         keyFace->setInfillDensity(density);
     }
+    emit checkpoint();
 }
 
 void VAC::setInfillPatternForSelectedCells(InfillPattern::Pattern pattern)
@@ -6969,6 +7002,7 @@ void VAC::setInfillPatternForSelectedCells(InfillPattern::Pattern pattern)
     for (auto keyFace : keyFaces) {
         keyFace->setInfillPattern(pattern);
     }
+    emit checkpoint();
 }
 
 void VAC::updateToBePaintedFace(double x, double y, Time time)

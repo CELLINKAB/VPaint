@@ -208,6 +208,7 @@ public:
     //Colors change
     void changeEdgesColor();
     void changeFacesColor();
+    void changeInfillColor();
     void adjusSelectedAndHighlighted(Cell* cell);
     void adjustSelectColors(Cell* cell);
 

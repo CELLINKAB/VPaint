@@ -629,6 +629,10 @@ void Cycle::fromString(const QString & str)
     // Split at ',', '[', ']', or any whitespace character
     QStringList strList = str.split(QRegExp("[\\,\\s\\[\\]]"), QString::SkipEmptyParts);
 
+    // If the empty cycle was written and read - then leaving the empty cycle
+    if (strList.isEmpty())
+        return;
+
     // Get some info to determine cycle type
     QString firstStr = strList[0];
     QChar c =  firstStr.at(firstStr.length()-1);

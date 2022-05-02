@@ -97,9 +97,9 @@ private:
     friend class VAC;
 
     ~KeyEdge();
-    KeyVertex * startVertex_;
-    KeyVertex * endVertex_;
-    EdgeGeometry * geometry_;
+    KeyVertex * startVertex_ = nullptr;
+    KeyVertex * endVertex_ = nullptr;
+    EdgeGeometry * geometry_ = nullptr;
 
     // Trusting operators
     friend class Operator;

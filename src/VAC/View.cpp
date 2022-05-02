@@ -76,6 +76,7 @@ const constexpr auto POLYGON_ARROUND_VERTICES_FROM = 4;
 const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
 const constexpr auto POLYGON_ARROUND_ALPHA = 0;
 const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
+const constexpr auto IS_DRAW_CIRCLES_AS_CURVES = false;
 }
 
 View::View(VPaint::Scene * scene, QWidget * parent) :
@@ -112,6 +113,7 @@ View::View(VPaint::Scene * scene, QWidget * parent) :
 
     connect(global(), &Global::edgeColorChanged, this, [this]() { if(vac_) { vac_->changeEdgesColor(); }});
     connect(global(), &Global::faceColorChanged, this, [this]() { if(vac_) { vac_->changeFacesColor(); }});
+    connect(global(), &Global::infillColorChanged, this, [this]() { if(vac_) { vac_->changeInfillColor(); }});
 }
 
 View::~View()
@@ -1159,7 +1161,8 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
                 auto lastEdge = vac_->instantEdges().last();
                 lastEdge->setShapeType(ShapeType::CURVE);
                 lastEdge->setIgnored(true);
-                lastDrawnCells_ << lastEdge;            }
+                lastDrawnCells_ << lastEdge;
+            }
             endDrawShape();
             scene()->emitShapeDrawn(ShapeType::CURVE);
         }
@@ -1198,9 +1201,15 @@ void View::drawCircle(double x, double y, ShapeDrawPhase drawPhase)
     switch (drawPhase) {
     case ShapeDrawPhase::DRAW_PROCESS:
     {
-        //Draw circle as polygon
-        drawShape(x, y, ShapeType::POLYGON, CIRCLE_VERTICES, 0, true);
-//        drawShape(x, y, ShapeType::CIRCLE, CIRCLE_VERTICES);
+        if (IS_DRAW_CIRCLES_AS_CURVES) {
+            // Draw circle using curved(will be enabled in future)
+            // Now it's working fast but has some issues with infill
+            drawShape(x, y, ShapeType::CIRCLE, CIRCLE_VERTICES);
+        } else {
+            // Draw circle as polygon, works fine but caused some
+            // performance issues becasue it's used a lot of key vertices
+            drawShape(x, y, ShapeType::POLYGON, CIRCLE_VERTICES, 0, true);
+        }
         break;
     }
     case ShapeDrawPhase::DRAW_END:

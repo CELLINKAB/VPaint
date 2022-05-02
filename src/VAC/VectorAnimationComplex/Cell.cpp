@@ -167,15 +167,13 @@ Cell::Cell(Cell * other)
     isSelected_ = other->isSelected_;
     // this sounds like a bad architecture: other->colorHighlighted
     // should not be zero. Kept like this for now anyway
-    if (other->colorHighlighted_)
-        for (int i=0; i<4; i++)
-            colorHighlighted_[i] = other->colorHighlighted_[i];
-    if (other->colorSelected_)
-        for (int i=0; i<4; i++)
-            colorSelected_[i] = other->colorSelected_[i];
-    if (other->color_)
-        for (int i=0; i<4; i++)
-            color_[i] = other->color_[i];
+    for (int i = 0; i < 4; i++)
+    {
+        color_[i] = other->color_[i];
+        colorHighlighted_[i] = other->colorHighlighted_[i];
+        colorSelected_[i] = other->colorSelected_[i];
+    }
+
     spatialStar_ = other->spatialStar_;
     temporalStarBefore_ = other->temporalStarBefore_;
     temporalStarAfter_ = other->temporalStarAfter_;
