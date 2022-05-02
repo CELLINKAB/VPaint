@@ -87,6 +87,18 @@ public:
 
     void updateInfill();
 
+    [[nodiscard]] QColor infillColor() const;
+    void setIffillColor(const QColor& c);
+
+    [[nodiscard]] QColor infillHighlightedColor() const;
+    void setInfillHighlightedColor(const QColor& c);
+
+    [[nodiscard]] QColor infillSelectedColor() const;
+    void setInfillSelectedColor(const QColor& c);
+
+    void adjustInfillHighlightedColor(const double colorRatio, const double alphaRatio = 1.2);
+    void adjustInfillSelectedColor(const double colorRatio, const double alphaRatio = 1.4);
+
 private:
     friend class VAC;
     virtual ~KeyFace();
@@ -113,6 +125,9 @@ private:
     void triangulate_(Time time, Triangles & out) const;
 
     InfillPattern infillPattern_{};
+    double infillColor_[4] = {0, 0, 0, 0};
+    double infillHighlightedColor_[4] = {0, 0, 0, 0};
+    double infillSelectedColor_[4] = {0, 0, 0, 0};
 
 // --------- Cloning, Assigning, Copying, Serializing ----------
 

@@ -68,6 +68,7 @@ Global::Global(MainWindow * w) :
     settings_(0),
     documentDir_(QDir::home()),
     faceColor_(QColor::fromRgb(100, 100, 100, 10)),
+    infillColor_(QColor::fromRgb(100, 100, 100, 10)),
     isDrawShapeFaceEnabled_(true),
     isShowAroundRectangleWhenDraw_(false),
     isShowVerticesOnSelection_(false),
@@ -871,6 +872,11 @@ QColor Global::faceColor()
     return faceColor_;
 }
 
+QColor Global::infillColor()
+{
+    return infillColor_;
+}
+
 void Global::setEdgeColor(const QColor& newColor)
 {
     if (newColor.isValid())
@@ -892,6 +898,16 @@ void Global::setFaceColor(const QColor& newColor)
 void Global::setFaceAlpha(int alpha)
 {
     faceColor_.setAlpha(alpha);
+    emit faceColorChanged();
+}
+
+void Global::setInfillColor(const QColor &newColor)
+{
+    if (newColor.isValid())
+    {
+        infillColor_ = newColor;
+        emit infillColorChanged();
+    }
 }
 
 bool Global::isShowAroundRectangleWhenDraw() const

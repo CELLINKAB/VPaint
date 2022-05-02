@@ -132,10 +132,12 @@ public:
     // Colors
     QColor edgeColor();
     QColor faceColor();
+    QColor infillColor();
 
     void setEdgeColor(const QColor& newColor);
     void setFaceColor(const QColor& newColor);
     void setFaceAlpha(int alpha);
+    void setInfillColor(const QColor& newColor);
 
     bool isShowAroundRectangleWhenDraw() const;
     void setShowAroundRectangleWhenDraw(bool isShow);
@@ -240,6 +242,7 @@ signals:
     void keyboardModifiersChanged();
     void edgeColorChanged();
     void faceColorChanged();
+    void infillColorChanged();
     void rightMouseClicked();
     void interactiveGeometryChanged();
 
@@ -350,7 +353,10 @@ private:
 
     // Status bar help
     QLabel * statusBarHelp_;
+
+    // Colors
     QColor faceColor_;
+    QColor infillColor_;
 
     bool isDrawShapeFaceEnabled_;
     bool isShowAroundRectangleWhenDraw_;
