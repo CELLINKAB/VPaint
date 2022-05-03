@@ -168,6 +168,12 @@ void Layer::read(XmlStreamReader & xml)
         name_ = xml.attributes().value("name").toString();
     }
 
+    // Height
+    if(xml.attributes().hasAttribute("layerHeight"))
+    {
+        absoluteLayerHeight_ = xml.attributes().value("layerHeight").toDouble();
+    }
+
     // Visible
     isVisible_ = true;
     if(xml.attributes().hasAttribute("visible"))
@@ -209,6 +215,9 @@ void Layer::write(XmlStreamWriter & xml)
 {
     // Name
     xml.writeAttribute("name", name());
+
+    // Height
+    xml.writeAttribute("layerHeight", QString().setNum(absoluteLayerHeight()));
 
     // Visible
     xml.writeAttribute("visible", isVisible() ? "true" : "false");
@@ -266,6 +275,11 @@ void Layer::setLayerHeight(qreal height)
         emit needUpdatePicking();
         emit layerAttributesChanged();
     }
+}
+
+void Layer::setAbsoluteLayerHeight(const qreal height)
+{
+    absoluteLayerHeight_ = height;
 }
 
 void Layer::exportSVG_(Time t, QTextStream & out)

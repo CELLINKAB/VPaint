@@ -167,15 +167,13 @@ Cell::Cell(Cell * other)
     isSelected_ = other->isSelected_;
     // this sounds like a bad architecture: other->colorHighlighted
     // should not be zero. Kept like this for now anyway
-    if (other->colorHighlighted_)
-        for (int i=0; i<4; i++)
-            colorHighlighted_[i] = other->colorHighlighted_[i];
-    if (other->colorSelected_)
-        for (int i=0; i<4; i++)
-            colorSelected_[i] = other->colorSelected_[i];
-    if (other->color_)
-        for (int i=0; i<4; i++)
-            color_[i] = other->color_[i];
+    for (int i = 0; i < 4; i++)
+    {
+        color_[i] = other->color_[i];
+        colorHighlighted_[i] = other->colorHighlighted_[i];
+        colorSelected_[i] = other->colorSelected_[i];
+    }
+
     spatialStar_ = other->spatialStar_;
     temporalStarBefore_ = other->temporalStarBefore_;
     temporalStarAfter_ = other->temporalStarAfter_;
@@ -796,9 +794,16 @@ void Cell::write(XmlStreamWriter & xml) const
 {
     xml.writeStartElement(xmlType_());
     xml.writeAttribute("id", QString().setNum(id()));
+    xml.writeAttribute("shapeID", QString().setNum(shapeID()));
+    xml.writeAttribute("shapeType", QString().setNum(static_cast<int>(shapeType())));
+    xml.writeAttribute("isIgnored", QString().setNum(isIgnored()));
     write_(xml);
     CssColor cssColor(color_);
+    CssColor cssColorSelected(colorSelected_);
+    CssColor cssColorHighlighted(colorHighlighted_);
     xml.writeAttribute("color", cssColor.toString());
+    xml.writeAttribute("colorSelected", cssColorSelected.toString());
+    xml.writeAttribute("colorHighlighted", cssColorHighlighted.toString());
     xml.writeEndElement();
 }
 
@@ -817,6 +822,9 @@ Cell::Cell(VAC * vac, XmlStreamReader & xml) :
     isHovered_(0), isSelected_(0)
 {
     id_ = xml.attributes().value("id").toInt();
+    shapeID_ = xml.attributes().value("shapeID").toInt();
+    shapeType_ = static_cast<ShapeType>(xml.attributes().value("shapeType").toInt());
+    isIgnored_ = xml.attributes().value("isIgnored").toInt();
 
     if(xml.attributes().hasAttribute("color"))
     {
@@ -834,15 +842,37 @@ Cell::Cell(VAC * vac, XmlStreamReader & xml) :
         color_[3] = 1;
     }
 
-    colorHighlighted_[0] = 1;
-    colorHighlighted_[1] = 0.7;
-    colorHighlighted_[2] = 0.7;
-    colorHighlighted_[3] = 1;
+    if (xml.attributes().hasAttribute("colorHighlighted"))
+    {
+        CssColor c(xml.attributes().value("colorHighlighted").toString());
+        colorHighlighted_[0] = c.rF();
+        colorHighlighted_[1] = c.gF();
+        colorHighlighted_[2] = c.bF();
+        colorHighlighted_[3] = c.aF();
+    }
+    else
+    {
+        colorHighlighted_[0] = 1;
+        colorHighlighted_[1] = 0.7;
+        colorHighlighted_[2] = 0.7;
+        colorHighlighted_[3] = 1;
+    }
 
-    colorSelected_[0] = 1;
-    colorSelected_[1] = 0;
-    colorSelected_[2] = 0;
-    colorSelected_[3] = 1;
+    if (xml.attributes().hasAttribute("colorSelected"))
+    {
+        CssColor c(xml.attributes().value("colorSelected").toString());
+        colorSelected_[0] = c.rF();
+        colorSelected_[1] = c.gF();
+        colorSelected_[2] = c.bF();
+        colorSelected_[3] = c.aF();
+    }
+    else
+    {
+        colorSelected_[0] = 1;
+        colorSelected_[1] = 0;
+        colorSelected_[2] = 0;
+        colorSelected_[3] = 1;
+    }
 }
 
 bool Cell::check() const

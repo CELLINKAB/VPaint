@@ -34,6 +34,8 @@
 #include "../Global.h"
 
 #include "../OpenGL.h"
+#include "../CssColor.h"
+#include "VAC.h"
 
 #if defined(__APPLE__) && defined(__MACH__)
 #  include <OpenGL/glu.h>
@@ -392,6 +394,37 @@ void KeyFace::setCycles(const QList<Cycle> & cycles)
     addCycles(cycles);
 }
 
+const InfillPattern& KeyFace::infill() const
+{
+    return infillPattern_;
+}
+
+void KeyFace::setInfillDensity(int density)
+{
+    infillPattern_.setDensity(density);
+    updateInfill();
+}
+
+void KeyFace::setInfillPattern(InfillPattern::Pattern pattern)
+{
+    infillPattern_.setPattern(pattern);
+    updateInfill();
+}
+
+void KeyFace::drawInfill()
+{
+    if (shapeType() != ShapeType::LINE) {
+        if(isHighlighted())
+            glColor4dv(infillHighlightedColor_);
+        else if(isSelected() && global()->toolMode() == Global::SELECT)
+            glColor4dv(infillSelectedColor_);
+        else
+            glColor4dv(infillColor_);
+
+        infillPattern_.draw();
+    }
+}
+
 void KeyFace::addCycles(const QList<Cycle> & cycles)
 {
     for(int i=0; i<cycles.size(); ++i)
@@ -452,6 +485,20 @@ void KeyFace::write_(XmlStreamWriter & xml) const
         cyclesstring += cycles_[i].toString();
     }
     xml.writeAttribute("cycles", cyclesstring);
+
+    // Infill section
+    if (!cycles_.empty() && shapeType() != ShapeType::LINE) {
+        xml.writeAttribute("InfillApply", QString::number(infillPattern_.isApplyInfill()));
+        xml.writeAttribute("InfillPattern", QString::number(static_cast<uint8_t>(infillPattern_.pattern())));
+        xml.writeAttribute("InfillDensity", QString::number(infillPattern_.density()));
+
+        CssColor cssInfillColor(infillColor_);
+        CssColor cssInfillColorSelected(infillHighlightedColor_);
+        CssColor cssInfillColorHighlighted(infillSelectedColor_);
+        xml.writeAttribute("infillColor", cssInfillColor.toString());
+        xml.writeAttribute("infillHighlightedColor", cssInfillColorSelected.toString());
+        xml.writeAttribute("infillSelectedColor", cssInfillColorHighlighted.toString());
+    }
 }
 
 KeyFace::KeyFace(VAC * vac, XmlStreamReader & xml) :
@@ -477,6 +524,43 @@ KeyFace::KeyFace(VAC * vac, XmlStreamReader & xml) :
             opened = false;
             str.clear();
         }
+    }
+
+    // Infill section
+    if (xml.attributes().hasAttribute("InfillApply"))
+        infillPattern_.setApplyInfill(xml.attributes().value("InfillApply").toInt());
+
+    if (xml.attributes().hasAttribute("InfillPattern"))
+        infillPattern_.setPattern(static_cast<InfillPattern::Pattern>(xml.attributes().value("InfillPattern").toUInt()));
+
+    if (xml.attributes().hasAttribute("InfillDensity"))
+        infillPattern_.setDensity(xml.attributes().value("InfillDensity").toInt());
+
+    if(xml.attributes().hasAttribute("infillColor"))
+    {
+        CssColor c(xml.attributes().value("infillColor").toString());
+        infillColor_[0] = c.rF();
+        infillColor_[1] = c.gF();
+        infillColor_[2] = c.bF();
+        infillColor_[3] = c.aF();
+    }
+
+    if (xml.attributes().hasAttribute("infillHighlightedColor"))
+    {
+        CssColor c(xml.attributes().value("infillHighlightedColor").toString());
+        infillHighlightedColor_[0] = c.rF();
+        infillHighlightedColor_[1] = c.gF();
+        infillHighlightedColor_[2] = c.bF();
+        infillHighlightedColor_[3] = c.aF();
+    }
+
+    if (xml.attributes().hasAttribute("infillSelectedColor"))
+    {
+        CssColor c(xml.attributes().value("infillSelectedColor").toString());
+        infillSelectedColor_[0] = c.rF();
+        infillSelectedColor_[1] = c.gF();
+        infillSelectedColor_[2] = c.bF();
+        infillSelectedColor_[3] = c.aF();
     }
 }
 
@@ -531,11 +615,17 @@ CellSet KeyFace::spatialBoundary() const
     return res;
 }
 
+const QList<Cycle> &KeyFace::cycles() const
+{
+    return cycles_;
+}
+
 void KeyFace::updateBoundary_impl(KeyEdge * oldEdge, const KeyEdgeList & newEdges)
 {
     for(int i=0; i<cycles_.size(); ++i)
         cycles_[i].replaceEdges(oldEdge, newEdges);
 }
+
 
 // Update boundary
 void KeyFace::updateBoundary_impl(KeyVertex * oldVertex, KeyVertex * newVertex)
@@ -548,6 +638,82 @@ void KeyFace::updateBoundary_impl(const KeyHalfedge & oldHalfedge, const KeyHalf
 {
     for(int i=0; i<cycles_.size(); ++i)
         cycles_[i].replaceHalfedge(oldHalfedge, newHalfedge);
+}
+
+void KeyFace::updateInfill()
+{
+    if (!cycles_.empty() && shapeType() != ShapeType::LINE) {
+        QPolygonF polygon{};
+        const auto cycle = cycles_[0];
+        for (const auto keyHalfEdge : cycle.keyHalfEdges()) {
+            if (keyHalfEdge.startVertex() != nullptr) {
+                polygon << QPointF{keyHalfEdge.startVertex()->pos().x(),
+                                   keyHalfEdge.startVertex()->pos().y()};
+            }
+        }
+        infillPattern_.update(polygon);
+    }
+}
+
+QColor KeyFace::infillColor() const
+{
+    QColor res;
+    res.setRgbF(infillColor_[0], infillColor_[1], infillColor_[2], infillColor_[3]);
+    return res;
+}
+
+void KeyFace::setIffillColor(const QColor& c)
+{
+    infillColor_[0] = c.redF();
+    infillColor_[1] = c.greenF();
+    infillColor_[2] = c.blueF();
+    infillColor_[3] = c.alphaF();
+}
+
+QColor KeyFace::infillHighlightedColor() const
+{
+    QColor res;
+    res.setRgbF(infillHighlightedColor_[0], infillHighlightedColor_[1], infillHighlightedColor_[2], infillHighlightedColor_[3]);
+    return res;
+}
+
+void KeyFace::setInfillHighlightedColor(const QColor& c)
+{
+    infillHighlightedColor_[0] = c.redF();
+    infillHighlightedColor_[1] = c.greenF();
+    infillHighlightedColor_[2] = c.blueF();
+    infillHighlightedColor_[3] = c.alphaF();
+}
+
+QColor KeyFace::infillSelectedColor() const
+{
+    QColor res;
+    res.setRgbF(infillSelectedColor_[0], infillSelectedColor_[1], infillSelectedColor_[2], infillSelectedColor_[3]);
+    return res;
+}
+
+void KeyFace::adjustInfillHighlightedColor(const double colorRatio, const double alphaRatio)
+{
+    infillHighlightedColor_[0] = infillColor_[0] * colorRatio;
+    infillHighlightedColor_[1] = infillColor_[1] * colorRatio;
+    infillHighlightedColor_[2] = infillColor_[2] * colorRatio;
+    infillHighlightedColor_[3] = infillColor_[3] * alphaRatio;
+}
+
+void KeyFace::setInfillSelectedColor(const QColor& c)
+{
+    infillSelectedColor_[0] = c.redF();
+    infillSelectedColor_[1] = c.greenF();
+    infillSelectedColor_[2] = c.blueF();
+    infillSelectedColor_[3] = c.alphaF();
+}
+
+void KeyFace::adjustInfillSelectedColor(const double colorRatio, const double alphaRatio)
+{
+    infillSelectedColor_[0] = infillColor_[0] * colorRatio;
+    infillSelectedColor_[1] = infillColor_[1] * colorRatio;
+    infillSelectedColor_[2] = infillColor_[2] * colorRatio;
+    infillSelectedColor_[3] = infillColor_[3] * alphaRatio;
 }
 
 KeyFace * KeyFace::clone()
@@ -572,12 +738,13 @@ KeyFace::KeyFace(KeyFace * other) :
 {
     for (auto i = 0; i < 4; i++)
     {
-        color_[i] = other->color_[i];
-        colorHighlighted_[i] = other->colorHighlighted_[i];
-        colorSelected_[i] = other->colorSelected_[i];
+        infillColor_[i] = other->infillColor_[i];
+        infillHighlightedColor_[i] = other->infillHighlightedColor_[i];
+        infillSelectedColor_[i] = other->infillSelectedColor_[i];
     }
 
     cycles_ = other->cycles_;
+    infillPattern_= other->infillPattern_;
 }
 
 bool KeyFace::check_() const

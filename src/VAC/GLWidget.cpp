@@ -69,7 +69,9 @@ GLWidget::GLWidget(QWidget *parent, bool isOnly2D) :
     fpstimer_(),
     fpstimerCount_(0),
 
-    mouse_tabletEventToMouseEvent_(QEvent::MouseButtonPress, QPoint(), Qt::LeftButton, Qt::NoButton, Qt::NoModifier)
+    mouse_tabletEventToMouseEvent_(QEvent::MouseButtonPress, QPoint(), Qt::LeftButton, Qt::NoButton, Qt::NoModifier),
+    lastViewChangedPos_{0, 0},
+    lastCameraPos_{0.0, 0.0}
 {
     // To grab keyboard focus when user clicks
     setFocusPolicy(Qt::ClickFocus);
@@ -191,7 +193,7 @@ void GLWidget::zoomIn(const double zoomRatio)
         camera2D_.setX( mouse_Event_X_ + ratio * ( camera2D_.x() - mouse_Event_X_ ) );
         camera2D_.setY( mouse_Event_Y_ + ratio * ( camera2D_.y() - mouse_Event_Y_ ) );
 
-        emit viewChanged(mouse_Event_X_, mouse_Event_Y_);
+        emitViewChanged(mouse_Event_X_, mouse_Event_Y_);
     }
 }
 
@@ -212,7 +214,7 @@ void GLWidget::zoomOut(const double zoomRatio)
         camera2D_.setX( mouse_Event_X_ + ratio * ( camera2D_.x() - mouse_Event_X_ ) );
         camera2D_.setY( mouse_Event_Y_ + ratio * ( camera2D_.y() - mouse_Event_Y_ ) );
 
-        emit viewChanged(mouse_Event_X_, mouse_Event_Y_);
+        emitViewChanged(mouse_Event_X_, mouse_Event_Y_);
     }
 }
 
@@ -236,7 +238,7 @@ void GLWidget::zoomInCenter(const double zoomRatio)
         camera2D_.setX(centerX + ratio * (camera2D_.x() - centerX));
         camera2D_.setY(centerY + ratio * (camera2D_.y() - centerY));
 
-        emit viewChanged(centerX, centerY);
+        emitViewChanged(centerX, centerY);
     }
 }
 
@@ -260,7 +262,37 @@ void GLWidget::zoomOutCenter(const double zoomRatio)
         camera2D_.setX( centerX + ratio * ( camera2D_.x() - centerX ) );
         camera2D_.setY( centerY + ratio * ( camera2D_.y() - centerY ) );
 
-        emit viewChanged(centerX, centerY);
+        emitViewChanged(centerX, centerY);
+    }
+}
+
+void GLWidget::setZoom2D(const double zoom, const double positionRatio)
+{
+
+    if(!isBusy() && cameraZoomIsEnabled_)
+    {
+        const auto lastX = lastViewChangedPos_.x();
+        const auto lastY = lastViewChangedPos_.y();
+        const auto lastCameraX = lastCameraPos_.x() * positionRatio;
+        const auto lastCameraY = lastCameraPos_.y() * positionRatio;
+        camera2D_.setZoom(zoom);
+        camera2D_.setX(lastCameraX);
+        camera2D_.setY(lastCameraY);
+        emitViewChanged(lastX, lastY);
+    }
+}
+
+void GLWidget::setZoom2DCenter(const double zoom)
+{
+    if(!isBusy() && cameraZoomIsEnabled_)
+    {
+        const int centerX = width() / 2;
+        const int centerY = height() / 2;
+        const auto ratio = zoom / camera2D_.zoom();
+        camera2D_.setZoom(zoom);
+        camera2D_.setX(centerX + ratio * ( camera2D_.x() - centerX ));
+        camera2D_.setY(centerY + ratio * ( camera2D_.y() - centerY ));
+        emitViewChanged(centerX, centerY);
     }
 }
 
@@ -476,7 +508,7 @@ void GLWidget::PMRReleaseEvent(int action, double /*xScene*/, double /*yScene*/)
        action == GLAction::Travelling ||
        action == GLAction::Zoom)
     {
-        emit viewChanged(mouse_Event_X_, mouse_Event_Y_);
+        emitViewChanged(mouse_Event_X_, mouse_Event_Y_);
     }
 }
 
@@ -737,13 +769,14 @@ void GLWidget::wheelEvent(QWheelEvent *event)
         camera_.setR( camera_.r() * ratio );
 
         // 2D
-        ratio = 1/ratio;
+        const auto ratio2d = 0.96;
+        ratio = event->delta() < 0 ? ratio2d : 1 / ratio2d;
         camera2D_.setZoom( camera2D_.zoom() * ratio );
         camera2D_.setX( mouse_Event_X_ + ratio * ( camera2D_.x() - mouse_Event_X_ ) );
         camera2D_.setY( mouse_Event_Y_ + ratio * ( camera2D_.y() - mouse_Event_Y_ ) );
 
         autoCenterScene_ = false;
-        emit viewChanged(mouse_Event_X_, mouse_Event_Y_);
+        emitViewChanged(mouse_Event_X_, mouse_Event_Y_);
     }
 }
 
@@ -1062,6 +1095,17 @@ void GLWidget::setMaterial(const GLWidget_Material & m)
       glMaterialfv(GL_BACK, GL_EMISSION, emissionBack);
                     
       glMateriali(GL_BACK, GL_SHININESS, m.shininessBack);
+}
+
+void GLWidget::emitViewChanged(int x, int y)
+{
+    lastViewChangedPos_.setX(x);
+    lastViewChangedPos_.setY(y);
+
+    lastCameraPos_.setX(camera2D_.x());
+    lastCameraPos_.setY(camera2D_.y());
+
+    emit viewChanged(x, y);
 }
 
 

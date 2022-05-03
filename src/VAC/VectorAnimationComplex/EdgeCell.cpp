@@ -68,10 +68,7 @@ EdgeCell::EdgeCell(VAC * vac, XmlStreamReader & xml) :
     Cell(vac, xml)
 {
     // highlighted/selected color
-    colorSelected_[0] = 1;
-    colorSelected_[1] = 0;
-    colorSelected_[2] = 0;
-    colorSelected_[3] = 1;
+    // Using colors from stored xml
 }
 
 bool EdgeCell::isPickableCustom(Time /*time*/) const

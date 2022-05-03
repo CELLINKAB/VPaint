@@ -157,6 +157,7 @@ private:
     bool isTransformConstrained_() const;
     KeyVertexSet draggedVertices_;
     KeyEdgeSet draggedEdges_;
+    KeyFaceSet draggedFaces_;
     double x0_, y0_, dx_, dy_, x_, y_;
     BoundingBox bb0_, obb0_;
     double dTheta_;

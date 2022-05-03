@@ -35,6 +35,7 @@
 #include "../View3DSettings.h"
 #include "VAC/vpaint_global.h"
 
+#include "InfillPattern.h"
 
 namespace VPaint
 {
@@ -207,6 +208,7 @@ public:
     //Colors change
     void changeEdgesColor();
     void changeFacesColor();
+    void changeInfillColor();
     void adjusSelectedAndHighlighted(Cell* cell);
     void adjustSelectColors(Cell* cell);
 
@@ -349,6 +351,9 @@ public:
     ShapeType shapeType(const CellSet & cells);
     QList<ShapeType> getSelectedShapeType();
     QList<ShapeType> getAllShapesType();
+
+    void setInfillDensityForSelectedCells(int density);
+    void setInfillPatternForSelectedCells(InfillPattern::Pattern pattern);
 protected:
     // Save & Load
     void save_(QTextStream & out);
@@ -367,6 +372,7 @@ private:
     void removeCell_(Cell * cell);
     void insertCell_(Cell * cell);
     void insertCellLast_(Cell * cell);
+
 
     // Managing IDs
     int getAvailableID();
@@ -457,6 +463,7 @@ private:
     // Drag and drop
     KeyVertexSet draggedVertices_;
     KeyEdgeSet draggedEdges_;
+    KeyFaceSet draggedFaces_;
     double x0_, y0_;
 
     // Temporal drag and drop

@@ -38,10 +38,7 @@ FaceCell::FaceCell(VAC * vac, XmlStreamReader & xml) :
     Cell(vac, xml)
 {
     // highlighted/selected color
-    colorSelected_[0] = 1;
-    colorSelected_[1] = 0.5;
-    colorSelected_[2] = 0.5;
-    colorSelected_[3] = 1;
+    // Using colors from stored xml
 }
 
 FaceCell::FaceCell(VAC * vac, QTextStream & in) :

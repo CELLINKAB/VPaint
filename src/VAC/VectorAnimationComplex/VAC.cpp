@@ -546,6 +546,8 @@ void VAC::draw(Time time, ViewSettings & viewSettings)
         // Draw all cells
         for(auto c: zOrdering_)
             c->draw(time, viewSettings);
+        for (auto f : KeyFaceSet(faces()))
+            f->drawInfill();
 
         // Draw sketched edge
         if(sketchedEdge_)
@@ -1040,6 +1042,13 @@ void VAC::read2ndPass_()
             kedge->correctGeometry();
         }
     }
+
+    for (auto face : qAsConst(cells_))
+    {
+        if (auto keyFace = face->toKeyFace()) {
+            keyFace->updateInfill();
+        }
+    }
 }
 
 void VAC::save_(QTextStream & out)
@@ -1363,10 +1372,13 @@ void VAC::smartDelete_(const CellSet & cellsToDelete)
 QList<ShapeType> VAC::getAllShapesType()
 {
     QList<ShapeType> types;
-    KeyFaceSet keyVertices = faces();
-    for( auto vertex : keyVertices)
+    KeyFaceSet keyFaces = faces();
+    for (auto face : keyFaces)
     {
-        types.append(vertex->shapeType());
+        if (!face->isIgnored())
+        {
+            types.append(face->shapeType());
+        }
     }
     return types;
 }
@@ -1958,14 +1970,14 @@ void VAC::changeEdgesColor()
         {
             auto ignoredColor = global()->edgeColor();
             ignoredColor.setAlpha(cell->color().alpha());
-            emitCheckpoint = emitCheckpoint ? true : ignoredColor != cell->color();
+            emitCheckpoint = emitCheckpoint || ignoredColor != cell->color();
             cell->setColor(ignoredColor);
             cell->setHighlightedColor(ignoredColor);
             cell->setSelectedColor(ignoredColor);
         }
         else if (auto keyEdge = cell->toKeyEdge())
         {
-            emitCheckpoint = emitCheckpoint ? true : edgeColor != keyEdge->color();
+            emitCheckpoint = emitCheckpoint || edgeColor != keyEdge->color();
             keyEdge->setColor(edgeColor);
             adjusSelectedAndHighlighted(keyEdge);
         }
@@ -1973,7 +1985,7 @@ void VAC::changeEdgesColor()
         {
             if (!global()->isShowVerticesOnSelection())
             {
-                emitCheckpoint = emitCheckpoint ? true : edgeColor != keyVertex->color();
+                emitCheckpoint = emitCheckpoint || edgeColor != keyVertex->color();
                 keyVertex->setColor(edgeColor);
                 adjusSelectedAndHighlighted(keyVertex);
             }
@@ -1994,9 +2006,31 @@ void VAC::changeFacesColor()
     {
         if (auto keyFace = cell->toKeyFace())
         {
-            emitCheckpoint = emitCheckpoint ? true : faceColor != keyFace->color();
+            emitCheckpoint = emitCheckpoint || faceColor != keyFace->color();
             keyFace->setColor(faceColor);
             adjusSelectedAndHighlighted(keyFace);
+        }
+    }
+
+    if (emitCheckpoint)
+    {
+        checkPointTimer->stop();
+        checkPointTimer->start(5);
+    }
+}
+
+void VAC::changeInfillColor()
+{
+    auto emitCheckpoint = false;
+    auto infillColor = global()->infillColor();
+    for(auto cell : selectedCells())
+    {
+        if (auto keyFace = cell->toKeyFace())
+        {
+            emitCheckpoint = emitCheckpoint || infillColor != keyFace->infillColor();
+            keyFace->setIffillColor(infillColor);
+            keyFace->adjustInfillHighlightedColor(global()->highlightColorRatio(), global()->highlightAlphaRatio());
+            keyFace->adjustInfillSelectedColor(global()->selectColorRatio(), global()->selectAlphaRatio());
         }
     }
 
@@ -2037,6 +2071,9 @@ void VAC::adjustSelectColors(Cell* cell)
     } else if (keyFace != nullptr) {
         colorChanged = colorChanged ? colorChanged : keyFace->color() != faceColor;
         keyFace->setColor(faceColor);
+        keyFace->setIffillColor(global()->infillColor());
+        keyFace->adjustInfillHighlightedColor(global()->highlightColorRatio(), global()->highlightAlphaRatio());
+        keyFace->adjustInfillSelectedColor(global()->selectColorRatio(), global()->selectAlphaRatio());
     } else {
         colorChanged = colorChanged ? colorChanged : cell->color() != edgeColor;
         cell->setColor(edgeColor);
@@ -6618,6 +6655,7 @@ void VAC::prepareDragAndDrop(double x0, double y0, Time time)
 {
     draggedVertices_.clear();
     draggedEdges_.clear();
+    draggedFaces_.clear();
 
     // do nothing if the highlighted object is not a node object
     if(!hoveredCell_)
@@ -6672,6 +6710,7 @@ void VAC::prepareDragAndDrop(double x0, double y0, Time time)
     // todo: add the non-loop edges whose end vertices are dragged
     draggedVertices_ = KeyVertexSet(cellsToDrag);
     draggedEdges_ = KeyEdgeSet(cellsToDrag);
+    draggedFaces_ = KeyFaceSet(cellsToDrag);
 
     // prepare drag and drop
     for(KeyEdge * iedge: qAsConst(draggedEdges_))
@@ -6718,6 +6757,9 @@ void VAC::performDragAndDrop(double x, double y)
 
     for(KeyVertex * v: qAsConst(draggedVertices_))
         v->correctEdgesGeometry();
+
+    for (KeyFace* f : qAsConst(draggedFaces_))
+        f->updateInfill();
 
     transformTool_.performDragAndDrop(dx, dy);
 
@@ -6937,6 +6979,30 @@ bool VAC::checkContains(const Cell * c) const
 {
     int id = c->id();
     return (cells_.contains(id)) && (cells_[id] == c);
+}
+
+void VAC::setInfillDensityForSelectedCells(int density)
+{
+    if(numSelectedCells() == 0)
+        return;
+
+    const auto keyFaces = KeyFaceSet(selectedCells());
+    for (auto keyFace : keyFaces) {
+        keyFace->setInfillDensity(density);
+    }
+    emit checkpoint();
+}
+
+void VAC::setInfillPatternForSelectedCells(InfillPattern::Pattern pattern)
+{
+    if(numSelectedCells() == 0)
+        return;
+
+    const auto keyFaces = KeyFaceSet(selectedCells());
+    for (auto keyFace : keyFaces) {
+        keyFace->setInfillPattern(pattern);
+    }
+    emit checkpoint();
 }
 
 void VAC::updateToBePaintedFace(double x, double y, Time time)

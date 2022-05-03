@@ -75,6 +75,9 @@ public:
     qreal layerHeight() const;
     void setLayerHeight(qreal height);
 
+    inline qreal absoluteLayerHeight() const { return absoluteLayerHeight_; }
+    void setAbsoluteLayerHeight(const qreal height);
+
 signals:
     // defined in base class (Scene Object)
     // void changed();
@@ -92,7 +95,8 @@ private:
     VectorAnimationComplex::VAC * vac_;
     QString name_;
     bool isVisible_;
-    qreal layerHeight_;
+    qreal layerHeight_ = 0.0;
+    qreal absoluteLayerHeight_ = -1.0;
 };
 
 #endif

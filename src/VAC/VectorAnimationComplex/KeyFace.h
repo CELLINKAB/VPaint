@@ -25,6 +25,7 @@
 #include "Triangles.h"
 
 #include "VAC/vpaint_global.h"
+#include "InfillPattern.h"
 
 namespace VectorAnimationComplex
 {
@@ -65,6 +66,13 @@ public:
     //   - cells of cycles must belong to vac()
     void setCycles(const QList<Cycle> & cycles);
 
+    const InfillPattern& infill() const;
+
+    void setInfillDensity(int density);
+    void setInfillPattern(InfillPattern::Pattern pattern);
+
+    void drawInfill();
+
     // Drawing
 
     // Get sampling of the boundary
@@ -74,6 +82,22 @@ public:
     CellSet spatialBoundary() const;
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+    const QList<Cycle>& cycles() const;
+
+    void updateInfill();
+
+    [[nodiscard]] QColor infillColor() const;
+    void setIffillColor(const QColor& c);
+
+    [[nodiscard]] QColor infillHighlightedColor() const;
+    void setInfillHighlightedColor(const QColor& c);
+
+    [[nodiscard]] QColor infillSelectedColor() const;
+    void setInfillSelectedColor(const QColor& c);
+
+    void adjustInfillHighlightedColor(const double colorRatio, const double alphaRatio = 1.2);
+    void adjustInfillSelectedColor(const double colorRatio, const double alphaRatio = 1.4);
 
 private:
     friend class VAC;
@@ -99,6 +123,11 @@ private:
 
     // Implementation of triangulate
     void triangulate_(Time time, Triangles & out) const;
+
+    InfillPattern infillPattern_{};
+    double infillColor_[4] = {0, 0, 0, 0};
+    double infillHighlightedColor_[4] = {0, 0, 0, 0};
+    double infillSelectedColor_[4] = {0, 0, 0, 0};
 
 // --------- Cloning, Assigning, Copying, Serializing ----------
 
