@@ -54,6 +54,7 @@ private:
     void gyroidInfill();
     void honeycombInfill();
     QPolygonF insetPolygon(QPolygonF polygon, double spacing);
+    void pruneInfill(QPolygonF naiveInfill);
     bool applyInfill_{false};
     double density_{25};
     double spacing_ = 100;

@@ -2,9 +2,178 @@
 
 #include <optional>
 
+#include <QtAlgorithms>
+
 InfillPattern::InfillPattern() = default;
 
 InfillPattern::~InfillPattern() = default;
+
+inline QPointF rotateAndNormalizePoint(double angle, const QPointF& vector)
+{
+    constexpr auto r = 1;
+    auto phi = atan2(vector.y(), vector.x());
+    phi += angle;
+    return QPointF{r * cos(phi), r * sin(phi)};
+}
+
+std::optional<QPointF> lineLineIntersection(QPointF A, QPointF B, QPointF C, QPointF D)
+{
+    // Line AB represented as a1x + b1y = c1
+    const double a1 = B.y() - A.y();
+    const double b1 = A.x() - B.x();
+    const double c1 = a1*(A.x()) + b1*(A.y());
+
+    // Line CD represented as a2x + b2y = c2
+    const double a2 = D.y() - C.y();
+    const double b2 = C.x() - D.x();
+    const double c2 = a2*(C.x())+ b2*(C.y());
+
+    const double determinant = a1*b2 - a2*b1;
+
+    if (determinant == 0)
+    {
+        // The lines are parallel. This is simplified
+        // by returning a pair of FLT_MAX
+        return {};
+    }
+    else
+    {
+        const double x = (b2*c1 - b1*c2)/determinant;
+        const double y = (a1*c2 - a2*c1)/determinant;
+        return {QPointF(x, y)};
+    }
+}
+
+bool ccw(QPointF A, QPointF B, QPointF C)
+{
+    return (C.y() - A.y()) * (B.x() - A.x()) > (B.y() - A.y()) * (C.x() - A.x());
+}
+
+bool intersect(QPointF A, QPointF B, QPointF C, QPointF D)
+{
+    return ccw(A, C, D) != ccw(B, C, D) && ccw(A, B, C) != ccw(A, B, D);
+}
+
+std::optional<QPointF> segmentSegmentIntersection(QPointF A, QPointF B, QPointF C, QPointF D)
+{
+    if (intersect(A, B, C, D)) {
+        const auto intersection = lineLineIntersection(A, B, C, D);
+        return intersection;
+    }
+    return {};
+}
+
+QVector<QPair<QPointF, int>> linePolygonIntersections(QPointF A, QPointF B, QPolygonF inset)
+{
+    QVector<QPair<QPointF, int>> intersectedLines{};
+    for (int i = 0; i < inset.size() - 1; i++) {
+        if (const auto point = segmentSegmentIntersection(A, B, inset[i], inset[i + 1])) {
+            intersectedLines << QPair{point.value(), i};
+        }
+    }
+    return intersectedLines;
+}
+
+bool QPointFLessThan(const QPair<QPointF, int> &p1, const QPair<QPointF, int> &p2)
+{
+    return std::pow(p1.first.x(), 2) + std::pow(p1.first.y(), 2) < std::pow(p2.first.x(), 2) + std::pow(p2.first.y(), 2);
+}
+
+QVector<QPair<QPointF, int>> sortPointsByDistance(QPointF startPosition, QVector<QPair<QPointF, int>> foundIntersectionPoints)
+{
+    QVector<QPair<QPointF, int>> subtractedIntersectionPoints;
+    for (const auto foundIntersectionPoint: foundIntersectionPoints) {
+        subtractedIntersectionPoints << QPair{foundIntersectionPoint.first - startPosition, foundIntersectionPoint.second};
+    }
+    qSort(subtractedIntersectionPoints.begin(), subtractedIntersectionPoints.end(), QPointFLessThan);
+    QVector<QPair<QPointF, int>> addedBackIntersectionPoints;
+    for (const auto intersection: subtractedIntersectionPoints) {
+        addedBackIntersectionPoints << QPair{intersection.first + startPosition, intersection.second};
+    }
+    return addedBackIntersectionPoints;
+}
+
+double pointToLineSegmentDistanceSquared(QPointF p, QPointF startPoint, QPointF endPoint)
+{
+    const auto x = p.x();
+    const auto y = p.y();
+    const auto x1 = startPoint.x();
+    const auto y1 = startPoint.y();
+    const auto x2 = endPoint.x();
+    const auto y2 = endPoint.y();
+
+    const auto A = x - x1;
+    const auto B = y - y1;
+    const auto C = x2 - x1;
+    const auto D = y2 - y1;
+
+    const auto dot = A * C + B * D;
+    const auto lengthSquared = C * C + D * D;
+    auto param = -1;
+    if (lengthSquared != 0) {
+        param = dot / lengthSquared;
+    }
+    auto xx = x1;
+    auto yy = y1;
+    if (param > 1) {
+        xx = x2;
+        yy = y2;
+    } else {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+    const auto dx = x - xx;
+    const auto dy = y - yy;
+    return std::pow(dx, 2) + std::pow(dy, 2);
+}
+
+double polygonCircumferenceDistance(QPolygonF polygon)
+{
+    auto distance = 0.0;
+    for (int i = 0; i < polygon.size() - 1; i++) {
+        const auto firstPoint = polygon[i];
+        const auto secondPoint = polygon[i + 1];
+        distance += std::sqrt(std::pow(secondPoint.x() - firstPoint.x(), 2) + std::pow(secondPoint.y() - firstPoint.y(), 2));
+    }
+    return distance;
+}
+
+QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int insetStartIndex, int insetEndIndex, QPolygonF inset)
+{
+    QPolygonF path{};
+    qDebug() << "apa10" << insetStartIndex << insetEndIndex << inset.size();
+    path << startPoint << inset[(insetStartIndex + 1) % inset.size()];
+    int insetIndex = insetStartIndex + 1;
+    while((insetIndex + 1) % inset.size() != insetEndIndex) {
+        qDebug() << "insetIndex" << insetIndex;
+//    for (int insetIndex = insetStartIndex + 1; insetIndex < insetEndIndex - 1; insetIndex = (insetIndex + 1) % inset.size()) {
+        const auto start = inset[insetIndex];
+        const auto end = inset[(insetIndex + 1) % inset.size()];
+        qDebug() << "start" << start << "end" << end << "inset[insetStartIndex]" << inset[insetStartIndex] << "inset[insetStartIndex + 1]" << inset[insetStartIndex + 1];
+        if (pointToLineSegmentDistanceSquared(endPoint, inset[insetStartIndex], inset[insetStartIndex + 1]) == 0) {
+            path << start << endPoint;
+            qDebug() << "breaking";
+            break;
+        } else {
+            path << start << end;
+        }
+        insetIndex = (insetIndex + 1) % inset.size();
+    }
+    return path;
+}
+
+std::tuple<QPolygonF, int, int> reversePolygonFOrientation(QPolygonF polygon, int startIndex, int endIndex)
+{
+    QPolygonF reversedPolygon{};
+    for (int i = polygon.size() - 1/*endIndex - 1*/; i >= 0; i--) {
+        reversedPolygon << polygon[i];
+
+    }
+    const auto traversedPoints = endIndex - startIndex;
+
+    return std::tuple<QPolygonF, int, int>{reversedPolygon, polygon.size() - 1 - endIndex, polygon.size() - 1 - startIndex};
+}
+
 
 void InfillPattern::rectiLinearVerticalInfill()
 {
@@ -17,22 +186,23 @@ void InfillPattern::rectiLinearVerticalInfill()
     const auto bottom = outerBoundingBox.bottom();
     const auto insetTop = inset_.boundingRect().top();
     const auto insetBottom = inset_.boundingRect().bottom();
+    const auto boundingPolygon = QPolygonF{{outerBoundingBox.topLeft(), outerBoundingBox.topRight(), outerBoundingBox.bottomRight(), outerBoundingBox.bottomLeft()}};
 
     auto up = true;
 
     for (auto x = startBoundary; x <= endBoundary; x += spacing_) {
         auto potentialTopPoint = QPointF{x, top};
-        while((!inset_.containsPoint(potentialTopPoint, Qt::OddEvenFill) || qFuzzyCompare(potentialTopPoint.y(), insetTop)) && potentialTopPoint.y() <= bottom) {
+        while((!boundingPolygon.containsPoint(potentialTopPoint, Qt::OddEvenFill) || qFuzzyCompare(potentialTopPoint.y(), insetTop)) && potentialTopPoint.y() <= bottom) {
             potentialTopPoint += QPointF{0, 1};
         }
         auto potentialBottomPoint = QPointF{x, bottom};
-        while((!inset_.containsPoint(potentialBottomPoint, Qt::OddEvenFill) || qFuzzyCompare(potentialBottomPoint.y(), insetBottom)) && potentialBottomPoint.y() >= top) {
+        while((!boundingPolygon.containsPoint(potentialBottomPoint, Qt::OddEvenFill) || qFuzzyCompare(potentialBottomPoint.y(), insetBottom)) && potentialBottomPoint.y() >= top) {
             potentialBottomPoint -= QPointF{0, 1};
         }
 
         if (potentialBottomPoint.y() - potentialTopPoint.y() > spacing_ &&
-                inset_.containsPoint(potentialTopPoint, Qt::OddEvenFill) &&
-                inset_.containsPoint(potentialBottomPoint, Qt::OddEvenFill)) {
+                boundingPolygon.containsPoint(potentialTopPoint, Qt::OddEvenFill) &&
+                boundingPolygon.containsPoint(potentialBottomPoint, Qt::OddEvenFill)) {
             if (up) {
                 infillPoints << potentialBottomPoint;
                 infillPoints << potentialTopPoint;
@@ -83,42 +253,6 @@ void InfillPattern::rectiLinearHorizontalInfill()
     }
 
     data_ << QVector<QVector<QPointF>>{infillPoints};
-}
-
-inline QPointF rotateAndNormalizePoint(double angle, const QPointF& vector)
-{
-    constexpr auto r = 1;
-    auto phi = atan2(vector.y(), vector.x());
-    phi += angle;
-    return QPointF{r * cos(phi), r * sin(phi)};
-}
-
-std::optional<QPointF> lineLineIntersection(QPointF A, QPointF B, QPointF C, QPointF D)
-{
-    // Line AB represented as a1x + b1y = c1
-    const double a1 = B.y() - A.y();
-    const double b1 = A.x() - B.x();
-    const double c1 = a1*(A.x()) + b1*(A.y());
-
-    // Line CD represented as a2x + b2y = c2
-    const double a2 = D.y() - C.y();
-    const double b2 = C.x() - D.x();
-    const double c2 = a2*(C.x())+ b2*(C.y());
-
-    const double determinant = a1*b2 - a2*b1;
-
-    if (determinant == 0)
-    {
-        // The lines are parallel. This is simplified
-        // by returning a pair of FLT_MAX
-        return {};
-    }
-    else
-    {
-        const double x = (b2*c1 - b1*c2)/determinant;
-        const double y = (a1*c2 - a2*c1)/determinant;
-        return {QPointF(x, y)};
-    }
 }
 
 void InfillPattern::gridInfill()
@@ -350,50 +484,51 @@ void InfillPattern::honeycombInfill()
     const auto leftDown = QPointF{-L * std::sin(M_PI/6), L * std::cos(M_PI/6) - d / 2};
     const auto leftUp = QPointF{-L * std::sin(M_PI/6), -L * std::cos(M_PI/6) + d / 2};
     const auto rightUp = QPointF{L * std::sin(M_PI/6), -L * std::cos(M_PI/6) + d / 2};
+    const auto boundingPolygon = QPolygonF{{outerBoundingBox.topLeft(), outerBoundingBox.topRight(), outerBoundingBox.bottomRight(), outerBoundingBox.bottomLeft()}};
 
     for (auto y = top; y <= bottom; y+= (rightDown.y() + d) * 2) {
         QPolygonF contiguousData;
         QPointF currentPosition{startBoundary, y};
         while (currentPosition.x() <= endBoundary) {
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
             currentPosition.setX(currentPosition.x() + L);
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
             currentPosition += rightDown;
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
             currentPosition.setX(currentPosition.x() + L);
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
             currentPosition += rightUp;
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
         }
         currentPosition = QPointF{currentPosition.x() + L, y + rightDown.y() * 2 + d};
         while (currentPosition.x() >= startBoundary) {
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
             currentPosition.setX(currentPosition.x() - L);
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
             currentPosition += leftUp;
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
             currentPosition.setX(currentPosition.x() - L);
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
             currentPosition += leftDown;
-            if (inset_.containsPoint(currentPosition, Qt::OddEvenFill)) {
+            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
             }
         }
@@ -440,12 +575,95 @@ QPolygonF InfillPattern::insetPolygon(QPolygonF polygon, double distance)
     return prunedInset;
 }
 
+void InfillPattern::pruneInfill(QPolygonF naiveInfill)
+{
+    qDebug() << "-----------------------------------------------";
+    qDebug() << "naiveInfill" << naiveInfill;
+    QVector<QVector<QPair<QPointF, int>>> prunedInfill{};
+    auto outside = true;
+    for (int i = 0; i < naiveInfill.size() - 1; i++) {
+        QVector<QPair<QPointF, int>> connectedPrunedInfill{};
+        const auto firstPoint = naiveInfill[i];
+        const auto secondPoint = naiveInfill[i + 1];
+        const auto intersections = linePolygonIntersections(firstPoint, secondPoint, inset_);
+        if (intersections.isEmpty()) {
+            continue;
+        }
+        const auto sortedIntersections = sortPointsByDistance(firstPoint, intersections);
+        qDebug() << "intersections" << intersections;
+        qDebug() << "sortedIntersections" << sortedIntersections;
+        for (int j = 0; j < sortedIntersections.size() - 1; j += 2) {
+//            if (outside) {
+                connectedPrunedInfill << sortedIntersections[j] << sortedIntersections[j + 1];
+//            }
+            outside = !outside;
+        }
+        if (!connectedPrunedInfill.isEmpty()) {
+            prunedInfill << connectedPrunedInfill;
+            qDebug() << "added" << connectedPrunedInfill;
+        }
+    }
+    QVector<QVector<QPointF>> prunedInfill2{};
+    qDebug() << "apa1";
+    prunedInfill2 << QVector<QPointF>{};
+    if (!prunedInfill.empty()) {
+        QVector<QPointF> temp{};
+        for (const auto pI: prunedInfill[0]) {
+            temp << pI.first;
+        }
+        prunedInfill2[0] << temp;
+    }
+    qDebug()<< "apa4" << prunedInfill;
+    for (int i = 0; i < prunedInfill.size() - 1; i++) {
+        const auto startConnectedInfill = prunedInfill[i];
+        const auto endConnectedInfill = prunedInfill[i + 1];
+        const auto startPointPair = startConnectedInfill.last();
+        const auto endPointPair = endConnectedInfill.first();
+        const auto startPoint = startPointPair.first;
+        const auto endPoint = endPointPair.first;
+        const auto insetStartIndex = startPointPair.second;
+        const auto insetEndIndex = endPointPair.second;
+        qDebug() << "start and end" << startPoint << endPoint << insetStartIndex << insetEndIndex;
+        if (insetStartIndex == insetEndIndex /*qFuzzyCompare(pointToLineSegmentDistanceSquared(endPoint, inset_[insetStartIndex], inset_[insetStartIndex + 1]), 0)*/) {
+            prunedInfill2[0] << startPoint << endPoint;
+        } else {
+
+            QPolygonF possiblePath = traverseFromStartToEnd(startPoint, endPoint, insetStartIndex, insetEndIndex, inset_);
+            prunedInfill2[0] << possiblePath;
+            const auto reversedPolygon = reversePolygonFOrientation(inset_, insetStartIndex, insetEndIndex);
+            qDebug() << "aaaaaaaaaaaaaaa" << inset_.size() << std::get<0>(reversedPolygon).size();
+            qDebug() << "aaaaaaaaaaaaaaa" << inset_ << std::get<0>(reversedPolygon);
+            const auto possiblePathReverse = traverseFromStartToEnd(startPoint, endPoint, std::abs(std::get<1>(reversedPolygon)), std::abs(std::get<2>(reversedPolygon)), std::get<0>(reversedPolygon));
+
+            qDebug() << "possiblePath" << possiblePath << polygonCircumferenceDistance(possiblePath);
+            qDebug() << "reversePossiblePath" << possiblePathReverse << polygonCircumferenceDistance(possiblePathReverse);
+            if (polygonCircumferenceDistance(possiblePath) <= polygonCircumferenceDistance(possiblePathReverse)) {
+                prunedInfill2[0] << possiblePath;
+                qDebug() << "first";
+            } else {
+                prunedInfill2[0] << possiblePathReverse;
+                qDebug() << "second";
+            }
+        }
+//        for (int inset = insetStartIndex; inset < insetEndIndex - 1; inset++) {
+
+//        }
+        QVector<QPointF> temp{};
+        for (const auto pI: endConnectedInfill) {
+            temp << pI.first;
+        }
+        prunedInfill2[0] << temp;
+    }
+    data_ << prunedInfill2;
+}
+
 void InfillPattern::update(QPolygonF &polygon)
 {
     spacing_ = (100 / density_) * 12;
     data_.clear();
     inset_.clear();
     inset_ = insetPolygon(polygon, insetDistance_);
+    inset_ << inset_.first();
     inputPolygon_ = polygon;
     switch (pattern_) {
     case Pattern::None:
@@ -455,6 +673,9 @@ void InfillPattern::update(QPolygonF &polygon)
         break;
     case Pattern::RectiLinear: {
         rectiLinearVerticalInfill();
+        const auto copy = data_;
+        data_.clear();
+        pruneInfill(copy.first());
             break;
         }
         case Pattern::Concentric:
@@ -466,9 +687,16 @@ void InfillPattern::update(QPolygonF &polygon)
         case Pattern::Gyroid:
             gyroidInfill();
             break;
-        case Pattern::HoneyComb:
-            honeycombInfill();
-            break;
+        case Pattern::HoneyComb: {
+
+        const auto copy = data_;
+        data_.clear();
+        for (const auto cc : copy) {
+            pruneInfill(cc);
+        }
+        honeycombInfill();
+        break;
+    }
     default:
         qWarning() << "Unknown pattern_" << static_cast<uint8_t>(pattern_);
         break;
@@ -483,6 +711,7 @@ const QVector<QVector<QPointF>>& InfillPattern::getPoints() const
 
 void InfillPattern::draw()
 {
+    glColor3b(120, 100, 30);
     for (const auto& contiguousData : data_) {
         glBegin(GL_LINE_STRIP);
         for (int i = 0; i < contiguousData.size(); i++) {
