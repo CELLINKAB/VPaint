@@ -156,8 +156,18 @@ void InfillPattern::concentricInfill()
 {
     const auto insetSpacing = spacing_ / 2;
     auto currentBorder = inset_;
+
+    // Temporary fix to prevent the endless loop which has appeared sometimes and caused the freezing and crash
+    // when the concentric infill has applied and almost always on resize the shape with infill
+    // TODO: Need to improve this logics because the concentric infil can be incorrect behaviour for not symmetric shapes
+    // It is most noticeable on ellipses, for the right circle it's working fine
+    const int max_data_count = currentBorder.boundingRect().width() < currentBorder.boundingRect().height() ?
+                               currentBorder.boundingRect().width() / spacing_:
+                               currentBorder.boundingRect().height() / spacing_;
+
     while((currentBorder.boundingRect().right() - currentBorder.boundingRect().left()) > insetSpacing &&
-          (currentBorder.boundingRect().bottom() - currentBorder.boundingRect().top()) > insetSpacing) {
+          (currentBorder.boundingRect().bottom() - currentBorder.boundingRect().top()) > insetSpacing &&
+           data_.count() < max_data_count) {
         currentBorder << currentBorder.first();
         data_ << currentBorder;
         currentBorder.pop_back();
