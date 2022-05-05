@@ -45,7 +45,8 @@ Scene::Scene() :
     height_(720),
     isUseConsistentLayerHeight_(true),
     consistentLayerHeight_(-1.0),
-    firstLayerHeightPercents_(-1.0)
+    firstLayerHeightPercents_(-1.0),
+    loadedSurfaceType_(SurfaceType::None)
 {
     indexHovered_ = -1;
 }
@@ -317,6 +318,21 @@ void Scene::readCanvas(XmlStreamReader & xml)
         firstLayerHeightPercents_ = xml.attributes().value("firstLayerHeightPercents").toDouble();
     }
 
+    if (xml.attributes().hasAttribute("surfaceType"))
+    {
+        loadedSurfaceType_ = static_cast<SurfaceType>(xml.attributes().value("surfaceType").toInt());
+    }
+
+    if (xml.attributes().hasAttribute("sceneWidth"))
+    {
+        setWidth(xml.attributes().value("sceneWidth").toInt());
+    }
+
+    if (xml.attributes().hasAttribute("sceneHeight"))
+    {
+        setHeight(xml.attributes().value("sceneHeight").toInt());
+    }
+
 
     xml.skipCurrentElement();
 }
@@ -328,6 +344,11 @@ void Scene::writeCanvas(XmlStreamWriter & xml)
     xml.writeAttribute("useConsistentLayerHeight", QString().setNum(isUseConsistentLayerHeight()));
     xml.writeAttribute("consistentLayerHeight", QString().setNum(consistentLayerHeight()));
     xml.writeAttribute("firstLayerHeightPercents", QString().setNum(firstLayerHeightPercents()));
+    xml.writeAttribute("surfaceType", QString().setNum(static_cast<int>(global()->surfaceType())));
+    xml.writeAttribute("sceneWidth", QString().setNum(width()));
+    xml.writeAttribute("sceneHeight", QString().setNum(height()));
+
+
 }
 
 void Scene::relativeRemap(const QDir & oldDir, const QDir & newDir)
@@ -780,6 +801,13 @@ void Scene::setFirstLayerHeightPercents(const qreal percents)
     if (percents >= 0 && percents <= 100) {
         firstLayerHeightPercents_ = percents;
     }
+}
+
+SurfaceType Scene::getLoadedSurfaceType()
+{
+    auto surfaceType = loadedSurfaceType_;
+    loadedSurfaceType_ = SurfaceType::None;
+    return surfaceType;
 }
 
 void Scene::deleteSelectedCells()
