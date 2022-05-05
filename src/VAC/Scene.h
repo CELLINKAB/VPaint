@@ -26,6 +26,7 @@
 #include "VAC/vpaint_global.h"
 #include "VAC/VectorAnimationComplex/Cell.h"
 #include "VAC/VectorAnimationComplex/InfillPattern.h"
+#include "Global.h"
 
 class Background;
 class View;
@@ -155,6 +156,8 @@ public:
     inline qreal firstLayerHeightPercents() const { return firstLayerHeightPercents_; }
     void setFirstLayerHeightPercents(const qreal percents);
 
+    SurfaceType getLoadedSurfaceType();
+
 public slots:
     // --------- Tools ----------
     void test();
@@ -251,6 +254,8 @@ private:
     bool isUseConsistentLayerHeight_;
     qreal consistentLayerHeight_;
     qreal firstLayerHeightPercents_;
+
+    SurfaceType loadedSurfaceType_;
 };
 }
     
