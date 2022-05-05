@@ -3,6 +3,8 @@
 
 #include "VAC/vpaint_global.h"
 
+#include <optional>
+
 // Creates and draws different infill patterns
 // NOTE: Only works for convex shapes
 
@@ -60,5 +62,15 @@ private:
     double spacing_ = 100;
     double insetDistance_ = 10;
 };
+
+Q_VPAINT_EXPORT std::optional<QPointF> segmentSegmentIntersection(QPointF A, QPointF B, QPointF C, QPointF D);
+Q_VPAINT_EXPORT double pointToLineSegmentDistanceSquared(QPointF p, QPointF startPoint, QPointF endPoint);
+Q_VPAINT_EXPORT double polygonCircumferenceDistance(QPolygonF polygon);
+Q_VPAINT_EXPORT QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int insetStartIndex, int insetEndIndex, QPolygonF inset);
+Q_VPAINT_EXPORT QVector<QPair<QPointF, int>> sortPointsByDistance(QPointF startPosition, QVector<QPair<QPointF, int>> foundIntersectionPoints);
+Q_VPAINT_EXPORT QPolygonF reversePolygonFOrientation(QPolygonF polygon);
+Q_VPAINT_EXPORT QVector<QVector<QPair<QPointF, int>>> pruneInfill(QPolygonF naiveInfill, QPolygonF inset);
+Q_VPAINT_EXPORT QVector<QPointF> connectInfillAlongInset(QVector<QVector<QPair<QPointF, int>>> prunedInfill, QPolygonF inset);
+Q_VPAINT_EXPORT std::tuple<int, int> startAndEndIndex(QPolygonF polygon, QPointF startPoint, QPointF endPoint);
 
 #endif // INFILLPATTERN_H

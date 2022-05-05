@@ -56,7 +56,11 @@ bool intersect(QPointF A, QPointF B, QPointF C, QPointF D)
 
 std::optional<QPointF> segmentSegmentIntersection(QPointF A, QPointF B, QPointF C, QPointF D)
 {
-    if (intersect(A, B, C, D)) {
+    if (intersect(A, B, C, D)
+            || pointToLineSegmentDistanceSquared(A, C, D) == 0
+            || pointToLineSegmentDistanceSquared(B, C, D) == 0
+            || pointToLineSegmentDistanceSquared(C, A, B) == 0
+            ||pointToLineSegmentDistanceSquared(D, A, B) == 0) {
         const auto intersection = lineLineIntersection(A, B, C, D);
         return intersection;
     }
@@ -66,8 +70,8 @@ std::optional<QPointF> segmentSegmentIntersection(QPointF A, QPointF B, QPointF 
 QVector<QPair<QPointF, int>> linePolygonIntersections(QPointF A, QPointF B, QPolygonF inset)
 {
     QVector<QPair<QPointF, int>> intersectedLines{};
-    for (int i = 0; i < inset.size() - 1; i++) {
-        if (const auto point = segmentSegmentIntersection(A, B, inset[i], inset[i + 1])) {
+    for (int i = 0; i < inset.size(); i++) {
+        if (const auto point = segmentSegmentIntersection(A, B, inset[i], inset[(i + 1) % inset.size()])) {
             intersectedLines << QPair{point.value(), i};
         }
     }
@@ -109,18 +113,19 @@ double pointToLineSegmentDistanceSquared(QPointF p, QPointF startPoint, QPointF 
 
     const auto dot = A * C + B * D;
     const auto lengthSquared = C * C + D * D;
-    auto param = -1;
+    auto param = -1.0;
     if (lengthSquared != 0) {
         param = dot / lengthSquared;
     }
-    auto xx = x1;
-    auto yy = y1;
-    if (param > 1) {
+
+    auto xx = x1 + param * C;
+    auto yy = y1 + param * D;
+    if (param < 0.0) {
+        xx = x1;
+        yy = y1;
+    } else if (param > 1.0) {
         xx = x2;
         yy = y2;
-    } else {
-        xx = x1 + param * C;
-        yy = y1 + param * D;
     }
     const auto dx = x - xx;
     const auto dy = y - yy;
@@ -138,42 +143,161 @@ double polygonCircumferenceDistance(QPolygonF polygon)
     return distance;
 }
 
+double pointToPointDistanceSquared(QPointF a, QPointF b) {
+    return std::pow(a.x() - b.x(), 2) + std::pow(a.y() - b.y(), 2);
+}
+
+bool compare(double d1, double d2, quint8 precision)
+{
+    return std::abs(d1 - d2) < std::pow(10, -precision);
+}
+
 QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int insetStartIndex, int insetEndIndex, QPolygonF inset)
 {
     QPolygonF path{};
-    qDebug() << "apa10" << insetStartIndex << insetEndIndex << inset.size();
-    path << startPoint << inset[(insetStartIndex + 1) % inset.size()];
-    int insetIndex = insetStartIndex + 1;
-    while((insetIndex + 1) % inset.size() != insetEndIndex) {
-        qDebug() << "insetIndex" << insetIndex;
-//    for (int insetIndex = insetStartIndex + 1; insetIndex < insetEndIndex - 1; insetIndex = (insetIndex + 1) % inset.size()) {
-        const auto start = inset[insetIndex];
-        const auto end = inset[(insetIndex + 1) % inset.size()];
-        qDebug() << "start" << start << "end" << end << "inset[insetStartIndex]" << inset[insetStartIndex] << "inset[insetStartIndex + 1]" << inset[insetStartIndex + 1];
-        if (pointToLineSegmentDistanceSquared(endPoint, inset[insetStartIndex], inset[insetStartIndex + 1]) == 0) {
-            path << start << endPoint;
-            qDebug() << "breaking";
-            break;
-        } else {
-            path << start << end;
+    path << startPoint;
+    // If we are moving in direction from start to end add endPoint
+    if (insetStartIndex == insetEndIndex &&
+        pointToPointDistanceSquared(startPoint, inset[insetStartIndex]) < pointToPointDistanceSquared(endPoint, inset[insetStartIndex])) {
+        path<< endPoint;
+    } else {
+        auto insetIndex = (insetStartIndex + 1) % inset.size();
+        while (insetIndex != insetStartIndex) {
+            const auto startInsetPoint = inset[insetIndex];
+            const auto endInsetPoint = inset[(insetIndex + 1) % inset.size()];
+            const auto distance = std::sqrt(pointToLineSegmentDistanceSquared(endPoint, startInsetPoint, endInsetPoint));
+            if (compare(pointToLineSegmentDistanceSquared(endPoint, startInsetPoint, endInsetPoint), 0.0, 5)) {
+                if (path.last() != startInsetPoint) {
+                    path << startInsetPoint;
+                }
+                if (path.last() != endPoint) {
+                    path << endPoint;
+                }
+                break;
+            } else {
+                if (path.last() != startInsetPoint) {
+                    path << startInsetPoint;
+                }
+                if (path.last() != endInsetPoint) {
+                    path << endInsetPoint;
+                }
+            }
+            insetIndex = (insetIndex + 1) % inset.size();
         }
-        insetIndex = (insetIndex + 1) % inset.size();
     }
     return path;
 }
 
-std::tuple<QPolygonF, int, int> reversePolygonFOrientation(QPolygonF polygon, int startIndex, int endIndex)
+QPolygonF reversePolygonFOrientation(QPolygonF polygon)
 {
     QPolygonF reversedPolygon{};
-    for (int i = polygon.size() - 1/*endIndex - 1*/; i >= 0; i--) {
+    for (int i = polygon.size() - 1; i >= 0; i--) {
         reversedPolygon << polygon[i];
-
     }
-    const auto traversedPoints = endIndex - startIndex;
 
-    return std::tuple<QPolygonF, int, int>{reversedPolygon, polygon.size() - 1 - endIndex, polygon.size() - 1 - startIndex};
+    return reversedPolygon;
 }
 
+std::tuple<int, int> startAndEndIndex(QPolygonF polygon, QPointF startPoint, QPointF endPoint)
+{
+    auto startIndex = -1;
+    auto endIndex = -1;
+
+    for (int i = 0; i < polygon.size(); i++) {
+        const auto lineStartPoint = polygon[i];
+        const auto lineEndPoint = polygon[(i + 1) % polygon.size()];
+        if (startPoint != lineEndPoint && compare(pointToLineSegmentDistanceSquared(startPoint, lineStartPoint, lineEndPoint), 0.0, 5)) {
+            startIndex = i;
+        }
+        if (endPoint != lineEndPoint && compare(pointToLineSegmentDistanceSquared(endPoint, lineStartPoint, lineEndPoint), 0.0, 5)) {
+            endIndex = i;
+        }
+    }
+    return std::tuple{startIndex, endIndex};
+}
+
+QVector<QVector<QPair<QPointF, int>>> pruneInfill(QPolygonF naiveInfill, QPolygonF inset)
+{
+    qDebug() << "-----------------------------------------------";
+    qDebug() << "naiveInfill" << naiveInfill;
+    QVector<QVector<QPair<QPointF, int>>> prunedInfill{};
+    auto outside = true;
+    for (int i = 0; i < naiveInfill.size() - 1; i++) {
+        QVector<QPair<QPointF, int>> connectedPrunedInfill{};
+        const auto firstPoint = naiveInfill[i];
+        const auto secondPoint = naiveInfill[i + 1];
+        const auto intersections = linePolygonIntersections(firstPoint, secondPoint, inset);
+        if (intersections.isEmpty()) {
+            continue;
+        }
+        const auto sortedIntersections = sortPointsByDistance(firstPoint, intersections);
+        qDebug() << "intersections" << intersections;
+        qDebug() << "sortedIntersections" << sortedIntersections;
+        for (int j = 0; j < sortedIntersections.size() - 1; j += 2) {
+//            if (outside) {
+                connectedPrunedInfill << sortedIntersections[j] << sortedIntersections[j + 1];
+//            }
+            outside = !outside;
+        }
+        if (!connectedPrunedInfill.isEmpty()) {
+            prunedInfill << connectedPrunedInfill;
+            qDebug() << "added" << connectedPrunedInfill;
+        }
+    }
+    return prunedInfill;
+}
+
+QVector<QPointF> connectInfillAlongInset(QVector<QVector<QPair<QPointF, int>>> prunedInfill, QPolygonF inset)
+{
+    qDebug() << "-------------------------------------------------";
+    qDebug() << "prunedInfill" << prunedInfill;
+    qDebug() << "inset" << inset;
+    QVector<QPointF> connectedInfill{};
+    if (!prunedInfill.empty()) {
+        for (const auto pI: prunedInfill[0]) {
+            connectedInfill << pI.first;
+        }
+    }
+    const auto reversedPolygon = reversePolygonFOrientation(inset);
+    for (int i = 0; i < prunedInfill.size() - 1; i++) {
+        const auto startConnectedInfill = prunedInfill[i];
+        const auto endConnectedInfill = prunedInfill[i + 1];
+        const auto startPointPair = startConnectedInfill.last();
+        const auto endPointPair = endConnectedInfill.first();
+        const auto startPoint = startPointPair.first;
+        const auto endPoint = endPointPair.first;
+        auto insetStartIndex = startPointPair.second;
+        auto insetEndIndex = endPointPair.second;
+
+        auto possiblePath = traverseFromStartToEnd(startPoint, endPoint, insetStartIndex, insetEndIndex, inset);
+        const auto startAndEndIndexTuple = startAndEndIndex(reversedPolygon, startPoint, endPoint);
+        insetStartIndex = std::get<0>(startAndEndIndexTuple);
+        insetEndIndex = std::get<1>(startAndEndIndexTuple);
+        auto possiblePathReverse = traverseFromStartToEnd(startPoint, endPoint, insetStartIndex, insetEndIndex, reversedPolygon);
+
+        qDebug() << "possiblePath" << possiblePath << polygonCircumferenceDistance(possiblePath);
+        qDebug() << "reversePossiblePath" << possiblePathReverse << polygonCircumferenceDistance(possiblePathReverse);
+        if (polygonCircumferenceDistance(possiblePath) <= polygonCircumferenceDistance(possiblePathReverse)) {
+            if (connectedInfill.last() == possiblePath.first()) {
+                possiblePath.pop_front();
+            }
+            connectedInfill << possiblePath;
+            qDebug() << "first";
+        } else {
+            if (connectedInfill.last() == possiblePathReverse.first()) {
+                possiblePathReverse.pop_front();
+            }
+            connectedInfill << possiblePathReverse;
+            qDebug() << "second";
+        }
+        for (const auto pI: endConnectedInfill) {
+            if (pI.first != connectedInfill.last()) {
+                connectedInfill << pI.first;
+            }
+        }
+    }
+    return connectedInfill;
+}
 
 void InfillPattern::rectiLinearVerticalInfill()
 {
@@ -577,84 +701,83 @@ QPolygonF InfillPattern::insetPolygon(QPolygonF polygon, double distance)
 
 void InfillPattern::pruneInfill(QPolygonF naiveInfill)
 {
-    qDebug() << "-----------------------------------------------";
-    qDebug() << "naiveInfill" << naiveInfill;
-    QVector<QVector<QPair<QPointF, int>>> prunedInfill{};
-    auto outside = true;
-    for (int i = 0; i < naiveInfill.size() - 1; i++) {
-        QVector<QPair<QPointF, int>> connectedPrunedInfill{};
-        const auto firstPoint = naiveInfill[i];
-        const auto secondPoint = naiveInfill[i + 1];
-        const auto intersections = linePolygonIntersections(firstPoint, secondPoint, inset_);
-        if (intersections.isEmpty()) {
-            continue;
-        }
-        const auto sortedIntersections = sortPointsByDistance(firstPoint, intersections);
-        qDebug() << "intersections" << intersections;
-        qDebug() << "sortedIntersections" << sortedIntersections;
-        for (int j = 0; j < sortedIntersections.size() - 1; j += 2) {
-//            if (outside) {
-                connectedPrunedInfill << sortedIntersections[j] << sortedIntersections[j + 1];
-//            }
-            outside = !outside;
-        }
-        if (!connectedPrunedInfill.isEmpty()) {
-            prunedInfill << connectedPrunedInfill;
-            qDebug() << "added" << connectedPrunedInfill;
-        }
-    }
-    QVector<QVector<QPointF>> prunedInfill2{};
-    qDebug() << "apa1";
-    prunedInfill2 << QVector<QPointF>{};
-    if (!prunedInfill.empty()) {
-        QVector<QPointF> temp{};
-        for (const auto pI: prunedInfill[0]) {
-            temp << pI.first;
-        }
-        prunedInfill2[0] << temp;
-    }
-    qDebug()<< "apa4" << prunedInfill;
-    for (int i = 0; i < prunedInfill.size() - 1; i++) {
-        const auto startConnectedInfill = prunedInfill[i];
-        const auto endConnectedInfill = prunedInfill[i + 1];
-        const auto startPointPair = startConnectedInfill.last();
-        const auto endPointPair = endConnectedInfill.first();
-        const auto startPoint = startPointPair.first;
-        const auto endPoint = endPointPair.first;
-        const auto insetStartIndex = startPointPair.second;
-        const auto insetEndIndex = endPointPair.second;
-        qDebug() << "start and end" << startPoint << endPoint << insetStartIndex << insetEndIndex;
-        if (insetStartIndex == insetEndIndex /*qFuzzyCompare(pointToLineSegmentDistanceSquared(endPoint, inset_[insetStartIndex], inset_[insetStartIndex + 1]), 0)*/) {
-            prunedInfill2[0] << startPoint << endPoint;
-        } else {
-
-            QPolygonF possiblePath = traverseFromStartToEnd(startPoint, endPoint, insetStartIndex, insetEndIndex, inset_);
-            prunedInfill2[0] << possiblePath;
-            const auto reversedPolygon = reversePolygonFOrientation(inset_, insetStartIndex, insetEndIndex);
-            qDebug() << "aaaaaaaaaaaaaaa" << inset_.size() << std::get<0>(reversedPolygon).size();
-            qDebug() << "aaaaaaaaaaaaaaa" << inset_ << std::get<0>(reversedPolygon);
-            const auto possiblePathReverse = traverseFromStartToEnd(startPoint, endPoint, std::abs(std::get<1>(reversedPolygon)), std::abs(std::get<2>(reversedPolygon)), std::get<0>(reversedPolygon));
-
-            qDebug() << "possiblePath" << possiblePath << polygonCircumferenceDistance(possiblePath);
-            qDebug() << "reversePossiblePath" << possiblePathReverse << polygonCircumferenceDistance(possiblePathReverse);
-            if (polygonCircumferenceDistance(possiblePath) <= polygonCircumferenceDistance(possiblePathReverse)) {
-                prunedInfill2[0] << possiblePath;
-                qDebug() << "first";
-            } else {
-                prunedInfill2[0] << possiblePathReverse;
-                qDebug() << "second";
-            }
-        }
-//        for (int inset = insetStartIndex; inset < insetEndIndex - 1; inset++) {
-
+//    qDebug() << "-----------------------------------------------";
+//    qDebug() << "naiveInfill" << naiveInfill;
+//    QVector<QVector<QPair<QPointF, int>>> prunedInfill{};
+//    auto outside = true;
+//    for (int i = 0; i < naiveInfill.size() - 1; i++) {
+//        QVector<QPair<QPointF, int>> connectedPrunedInfill{};
+//        const auto firstPoint = naiveInfill[i];
+//        const auto secondPoint = naiveInfill[i + 1];
+//        const auto intersections = linePolygonIntersections(firstPoint, secondPoint, inset_);
+//        if (intersections.isEmpty()) {
+//            continue;
 //        }
-        QVector<QPointF> temp{};
-        for (const auto pI: endConnectedInfill) {
-            temp << pI.first;
-        }
-        prunedInfill2[0] << temp;
-    }
-    data_ << prunedInfill2;
+//        const auto sortedIntersections = sortPointsByDistance(firstPoint, intersections);
+//        qDebug() << "intersections" << intersections;
+//        qDebug() << "sortedIntersections" << sortedIntersections;
+//        for (int j = 0; j < sortedIntersections.size() - 1; j += 2) {
+////            if (outside) {
+//                connectedPrunedInfill << sortedIntersections[j] << sortedIntersections[j + 1];
+////            }
+//            outside = !outside;
+//        }
+//        if (!connectedPrunedInfill.isEmpty()) {
+//            prunedInfill << connectedPrunedInfill;
+//            qDebug() << "added" << connectedPrunedInfill;
+//        }
+//    }
+//    QVector<QVector<QPointF>> prunedInfill2{};
+//    qDebug() << "apa1";
+//    prunedInfill2 << QVector<QPointF>{};
+//    if (!prunedInfill.empty()) {
+//        QVector<QPointF> temp{};
+//        for (const auto pI: prunedInfill[0]) {
+//            temp << pI.first;
+//        }
+//        prunedInfill2[0] << temp;
+//    }
+//    qDebug()<< "prunedInfill" << prunedInfill;
+//    for (int i = 0; i < prunedInfill.size() - 1; i++) {
+//        const auto startConnectedInfill = prunedInfill[i];
+//        const auto endConnectedInfill = prunedInfill[i + 1];
+//        const auto startPointPair = startConnectedInfill.last();
+//        const auto endPointPair = endConnectedInfill.first();
+//        const auto startPoint = startPointPair.first;
+//        const auto endPoint = endPointPair.first;
+//        const auto insetStartIndex = startPointPair.second;
+//        const auto insetEndIndex = endPointPair.second;
+//        qDebug() << "start and end" << startPoint << endPoint << insetStartIndex << insetEndIndex;
+//        if (false && insetStartIndex == insetEndIndex /*qFuzzyCompare(pointToLineSegmentDistanceSquared(endPoint, inset_[insetStartIndex], inset_[insetStartIndex + 1]), 0)*/) {
+//            prunedInfill2[0] << startPoint << endPoint;
+//        } else {
+
+//            QPolygonF possiblePath = traverseFromStartToEnd(startPoint, endPoint, insetStartIndex, insetEndIndex, inset_);
+//            const auto reversedPolygon = reversePolygonFOrientation(inset_, insetStartIndex, insetEndIndex);
+//            qDebug() << "aaaaaaaaaaaaaaa" << inset_.size() << std::get<0>(reversedPolygon).size();
+//            qDebug() << "aaaaaaaaaaaaaaa" << inset_ << std::get<0>(reversedPolygon);
+//            const auto possiblePathReverse = traverseFromStartToEnd(startPoint, endPoint, std::abs(std::get<1>(reversedPolygon)), std::abs(std::get<2>(reversedPolygon)), std::get<0>(reversedPolygon));
+
+//            qDebug() << "possiblePath" << possiblePath << polygonCircumferenceDistance(possiblePath);
+//            qDebug() << "reversePossiblePath" << possiblePathReverse << polygonCircumferenceDistance(possiblePathReverse);
+//            if (polygonCircumferenceDistance(possiblePath) <= polygonCircumferenceDistance(possiblePathReverse)) {
+//                prunedInfill2[0] << possiblePath;
+//                qDebug() << "first";
+//            } else {
+//                prunedInfill2[0] << possiblePathReverse;
+//                qDebug() << "second";
+//            }
+//        }
+////        for (int inset = insetStartIndex; inset < insetEndIndex - 1; inset++) {
+
+////        }
+//        QVector<QPointF> temp{};
+//        for (const auto pI: endConnectedInfill) {
+//            temp << pI.first;
+//        }
+//        prunedInfill2[0] << temp;
+//    }
+//    data_ << prunedInfill2;
 }
 
 void InfillPattern::update(QPolygonF &polygon)
@@ -663,7 +786,7 @@ void InfillPattern::update(QPolygonF &polygon)
     data_.clear();
     inset_.clear();
     inset_ = insetPolygon(polygon, insetDistance_);
-    inset_ << inset_.first();
+//    inset_ << inset_.first();
     inputPolygon_ = polygon;
     switch (pattern_) {
     case Pattern::None:
@@ -673,9 +796,9 @@ void InfillPattern::update(QPolygonF &polygon)
         break;
     case Pattern::RectiLinear: {
         rectiLinearVerticalInfill();
-        const auto copy = data_;
+        const auto prunedInfill = ::pruneInfill(data_.first(), inset_);
         data_.clear();
-        pruneInfill(copy.first());
+        data_ << connectInfillAlongInset(prunedInfill, inset_);
             break;
         }
         case Pattern::Concentric:
