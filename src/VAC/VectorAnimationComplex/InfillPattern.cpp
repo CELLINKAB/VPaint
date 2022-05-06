@@ -83,7 +83,7 @@ bool QPointFLessThan(const QPair<QPointF, int> &p1, const QPair<QPointF, int> &p
     return std::pow(p1.first.x(), 2) + std::pow(p1.first.y(), 2) < std::pow(p2.first.x(), 2) + std::pow(p2.first.y(), 2);
 }
 
-QVector<QPair<QPointF, int>> sortPointsByDistance(QPointF startPosition, QVector<QPair<QPointF, int>> foundIntersectionPoints)
+QVector<QPair<QPointF, int>> sortPointsByDistance(QPointF startPosition, const QVector<QPair<QPointF, int>>& foundIntersectionPoints)
 {
     QVector<QPair<QPointF, int>> subtractedIntersectionPoints;
     for (const auto foundIntersectionPoint: foundIntersectionPoints) {
@@ -132,7 +132,7 @@ double pointToLineSegmentDistanceSquared(QPointF p, QPointF startPoint, QPointF 
     return std::pow(dx, 2) + std::pow(dy, 2);
 }
 
-double polygonCircumferenceDistance(QPolygonF polygon)
+double polygonCircumferenceDistance(const QPolygonF& polygon)
 {
     auto distance = 0.0;
     for (int i = 0; i < polygon.size() - 1; i++) {
@@ -152,7 +152,7 @@ bool compare(double d1, double d2, quint8 precision)
     return std::abs(d1 - d2) < std::pow(10, -precision);
 }
 
-QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int insetStartIndex, int insetEndIndex, QPolygonF inset)
+QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int insetStartIndex, int insetEndIndex, const QPolygonF& inset)
 {
     QPolygonF path{};
     path << startPoint;
@@ -165,7 +165,6 @@ QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int inset
         while (insetIndex != insetStartIndex) {
             const auto startInsetPoint = inset[insetIndex];
             const auto endInsetPoint = inset[(insetIndex + 1) % inset.size()];
-            const auto distance = std::sqrt(pointToLineSegmentDistanceSquared(endPoint, startInsetPoint, endInsetPoint));
             if (compare(pointToLineSegmentDistanceSquared(endPoint, startInsetPoint, endInsetPoint), 0.0, 5)) {
                 if (path.last() != startInsetPoint) {
                     path << startInsetPoint;
@@ -188,7 +187,7 @@ QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int inset
     return path;
 }
 
-QPolygonF reversePolygonFOrientation(QPolygonF polygon)
+QPolygonF reversePolygonFOrientation(const QPolygonF& polygon)
 {
     QPolygonF reversedPolygon{};
     for (int i = polygon.size() - 1; i >= 0; i--) {
@@ -198,7 +197,7 @@ QPolygonF reversePolygonFOrientation(QPolygonF polygon)
     return reversedPolygon;
 }
 
-std::tuple<int, int> startAndEndIndex(QPolygonF polygon, QPointF startPoint, QPointF endPoint)
+std::tuple<int, int> startAndEndIndex(const QPolygonF& polygon, QPointF startPoint, QPointF endPoint)
 {
     auto startIndex = -1;
     auto endIndex = -1;
@@ -216,18 +215,24 @@ std::tuple<int, int> startAndEndIndex(QPolygonF polygon, QPointF startPoint, QPo
     return std::tuple{startIndex, endIndex};
 }
 
-QVector<QVector<QPair<QPointF, int>>> pruneInfill(QPolygonF naiveInfill, QPolygonF inset)
+QVector<QVector<QPair<QPointF, int>>> pruneInfill(const QPolygonF& naiveInfill, const QPolygonF& inset)
 {
     QVector<QVector<QPair<QPointF, int>>> prunedInfill{};
     QVector<QPair<QPointF, int>> connectedPrunedInfill{};
+    std::optional<QPointF> lastIntersectionPoint{};
     for (int i = 0; i < naiveInfill.size() - 1; i++) {
         const auto firstPoint = naiveInfill[i];
         const auto secondPoint = naiveInfill[i + 1];
 
-        const auto intersections = linePolygonIntersections(firstPoint, secondPoint, inset);
+        auto intersections = linePolygonIntersections(firstPoint, secondPoint, inset);
+
+        // Make sure to not step out and in on same interection point
+        if (!intersections.isEmpty() && lastIntersectionPoint && intersections.first().first == lastIntersectionPoint.value()) {
+            intersections.pop_front();
+        }
 
         // We first have to step inside
-        if (intersections.isEmpty() && connectedPrunedInfill.isEmpty()) {
+        if (connectedPrunedInfill.isEmpty() && intersections.isEmpty()) {
             continue;
         }
         // Since we are inside and have no intersections, both points are inside
@@ -238,32 +243,33 @@ QVector<QVector<QPair<QPointF, int>>> pruneInfill(QPolygonF naiveInfill, QPolygo
             if (secondPoint != connectedPrunedInfill.last().first) {
                 connectedPrunedInfill << QPair(secondPoint, -1);
             }
-        }
-        // Stepping inside
-        else if (connectedPrunedInfill.isEmpty()) {
+        } else {
             const auto sortedIntersections = sortPointsByDistance(firstPoint, intersections);
-            for (int j = 0; j < sortedIntersections.size(); j++) {
-                connectedPrunedInfill << sortedIntersections[j];
-                if (j % 2 == 1) {
-                    prunedInfill << connectedPrunedInfill;
-                    connectedPrunedInfill.clear();
+            // Stepping inside
+            if (connectedPrunedInfill.isEmpty()) {
+                for (int j = 0; j < sortedIntersections.size(); j++) {
+                    connectedPrunedInfill << sortedIntersections[j];
+                    if (j % 2 == 1) {
+                        prunedInfill << connectedPrunedInfill;
+                        connectedPrunedInfill.clear();
+                    }
                 }
-            }
 
-        }
-        // Stepping outside
-        else {
-            if (firstPoint != connectedPrunedInfill.last().first) {
-                connectedPrunedInfill << QPair(firstPoint, -1);
             }
-            const auto sortedIntersections = sortPointsByDistance(firstPoint, intersections);
-            for (int j = 0; j < sortedIntersections.size(); j++) {
-                connectedPrunedInfill << sortedIntersections[j];
-                if (j % 2 == 0) {
-                    prunedInfill << connectedPrunedInfill;
-                    connectedPrunedInfill.clear();
+            // Stepping outside
+            else {
+                if (firstPoint != connectedPrunedInfill.last().first) {
+                    connectedPrunedInfill << QPair(firstPoint, -1);
+                }
+                for (int j = 0; j < sortedIntersections.size(); j++) {
+                    connectedPrunedInfill << sortedIntersections[j];
+                    if (j % 2 == 0) {
+                        prunedInfill << connectedPrunedInfill;
+                        connectedPrunedInfill.clear();
+                    }
                 }
             }
+            lastIntersectionPoint = {sortedIntersections.last().first};
         }
     }
     return prunedInfill;

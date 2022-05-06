@@ -65,12 +65,12 @@ private:
 
 Q_VPAINT_EXPORT std::optional<QPointF> segmentSegmentIntersection(QPointF A, QPointF B, QPointF C, QPointF D);
 Q_VPAINT_EXPORT double pointToLineSegmentDistanceSquared(QPointF p, QPointF startPoint, QPointF endPoint);
-Q_VPAINT_EXPORT double polygonCircumferenceDistance(QPolygonF polygon);
-Q_VPAINT_EXPORT QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int insetStartIndex, int insetEndIndex, QPolygonF inset);
-Q_VPAINT_EXPORT QVector<QPair<QPointF, int>> sortPointsByDistance(QPointF startPosition, QVector<QPair<QPointF, int>> foundIntersectionPoints);
-Q_VPAINT_EXPORT QPolygonF reversePolygonFOrientation(QPolygonF polygon);
-Q_VPAINT_EXPORT QVector<QVector<QPair<QPointF, int>>> pruneInfill(QPolygonF naiveInfill, QPolygonF inset);
+Q_VPAINT_EXPORT double polygonCircumferenceDistance(const QPolygonF& polygon);
+Q_VPAINT_EXPORT QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int insetStartIndex, int insetEndIndex, const QPolygonF& inset);
+Q_VPAINT_EXPORT QVector<QPair<QPointF, int>> sortPointsByDistance(QPointF startPosition, const QVector<QPair<QPointF, int>>& foundIntersectionPoints);
+Q_VPAINT_EXPORT QPolygonF reversePolygonFOrientation(const QPolygonF& polygon);
+Q_VPAINT_EXPORT QVector<QVector<QPair<QPointF, int>>> pruneInfill(const QPolygonF& naiveInfill, const QPolygonF& inset);
 Q_VPAINT_EXPORT QVector<QPointF> connectInfillAlongInset(const QVector<QVector<QPair<QPointF, int>>>& prunedInfill, const QPolygonF& inset, bool connectBackToBeginning);
-Q_VPAINT_EXPORT std::tuple<int, int> startAndEndIndex(QPolygonF polygon, QPointF startPoint, QPointF endPoint);
+Q_VPAINT_EXPORT std::tuple<int, int> startAndEndIndex(const QPolygonF& polygon, QPointF startPoint, QPointF endPoint);
 
 #endif // INFILLPATTERN_H
