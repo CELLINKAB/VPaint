@@ -70,7 +70,7 @@ Q_VPAINT_EXPORT QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF end
 Q_VPAINT_EXPORT QVector<QPair<QPointF, int>> sortPointsByDistance(QPointF startPosition, QVector<QPair<QPointF, int>> foundIntersectionPoints);
 Q_VPAINT_EXPORT QPolygonF reversePolygonFOrientation(QPolygonF polygon);
 Q_VPAINT_EXPORT QVector<QVector<QPair<QPointF, int>>> pruneInfill(QPolygonF naiveInfill, QPolygonF inset);
-Q_VPAINT_EXPORT QVector<QPointF> connectInfillAlongInset(QVector<QVector<QPair<QPointF, int>>> prunedInfill, QPolygonF inset);
+Q_VPAINT_EXPORT QVector<QPointF> connectInfillAlongInset(const QVector<QVector<QPair<QPointF, int>>>& prunedInfill, const QPolygonF& inset, bool connectBackToBeginning);
 Q_VPAINT_EXPORT std::tuple<int, int> startAndEndIndex(QPolygonF polygon, QPointF startPoint, QPointF endPoint);
 
 #endif // INFILLPATTERN_H

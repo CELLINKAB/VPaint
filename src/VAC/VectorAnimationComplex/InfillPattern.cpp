@@ -218,36 +218,58 @@ std::tuple<int, int> startAndEndIndex(QPolygonF polygon, QPointF startPoint, QPo
 
 QVector<QVector<QPair<QPointF, int>>> pruneInfill(QPolygonF naiveInfill, QPolygonF inset)
 {
-    qDebug() << "-----------------------------------------------";
-    qDebug() << "naiveInfill" << naiveInfill;
     QVector<QVector<QPair<QPointF, int>>> prunedInfill{};
-    auto outside = true;
+    QVector<QPair<QPointF, int>> connectedPrunedInfill{};
     for (int i = 0; i < naiveInfill.size() - 1; i++) {
-        QVector<QPair<QPointF, int>> connectedPrunedInfill{};
         const auto firstPoint = naiveInfill[i];
         const auto secondPoint = naiveInfill[i + 1];
+
         const auto intersections = linePolygonIntersections(firstPoint, secondPoint, inset);
-        if (intersections.isEmpty()) {
+
+        // We first have to step inside
+        if (intersections.isEmpty() && connectedPrunedInfill.isEmpty()) {
             continue;
         }
-        const auto sortedIntersections = sortPointsByDistance(firstPoint, intersections);
-        qDebug() << "intersections" << intersections;
-        qDebug() << "sortedIntersections" << sortedIntersections;
-        for (int j = 0; j < sortedIntersections.size() - 1; j += 2) {
-//            if (outside) {
-                connectedPrunedInfill << sortedIntersections[j] << sortedIntersections[j + 1];
-//            }
-            outside = !outside;
+        // Since we are inside and have no intersections, both points are inside
+        if (intersections.isEmpty()) {
+            if (firstPoint != connectedPrunedInfill.last().first) {
+                connectedPrunedInfill << QPair(firstPoint, -1);
+            }
+            if (secondPoint != connectedPrunedInfill.last().first) {
+                connectedPrunedInfill << QPair(secondPoint, -1);
+            }
         }
-        if (!connectedPrunedInfill.isEmpty()) {
-            prunedInfill << connectedPrunedInfill;
-            qDebug() << "added" << connectedPrunedInfill;
+        // Stepping inside
+        else if (connectedPrunedInfill.isEmpty()) {
+            const auto sortedIntersections = sortPointsByDistance(firstPoint, intersections);
+            for (int j = 0; j < sortedIntersections.size(); j++) {
+                connectedPrunedInfill << sortedIntersections[j];
+                if (j % 2 == 1) {
+                    prunedInfill << connectedPrunedInfill;
+                    connectedPrunedInfill.clear();
+                }
+            }
+
+        }
+        // Stepping outside
+        else {
+            if (firstPoint != connectedPrunedInfill.last().first) {
+                connectedPrunedInfill << QPair(firstPoint, -1);
+            }
+            const auto sortedIntersections = sortPointsByDistance(firstPoint, intersections);
+            for (int j = 0; j < sortedIntersections.size(); j++) {
+                connectedPrunedInfill << sortedIntersections[j];
+                if (j % 2 == 0) {
+                    prunedInfill << connectedPrunedInfill;
+                    connectedPrunedInfill.clear();
+                }
+            }
         }
     }
     return prunedInfill;
 }
 
-QVector<QPointF> connectInfillAlongInset(QVector<QVector<QPair<QPointF, int>>> prunedInfill, QPolygonF inset)
+QVector<QPointF> connectInfillAlongInset(const QVector<QVector<QPair<QPointF, int>>>& prunedInfill, const QPolygonF& inset, bool connectBackToBeginning)
 {
     qDebug() << "-------------------------------------------------";
     qDebug() << "prunedInfill" << prunedInfill;
@@ -258,10 +280,14 @@ QVector<QPointF> connectInfillAlongInset(QVector<QVector<QPair<QPointF, int>>> p
             connectedInfill << pI.first;
         }
     }
+    auto subtractionStopFromEnd = 1;
+    if (connectBackToBeginning) {
+        subtractionStopFromEnd = 0;
+    }
     const auto reversedPolygon = reversePolygonFOrientation(inset);
-    for (int i = 0; i < prunedInfill.size() - 1; i++) {
+    for (int i = 0; i < prunedInfill.size() - subtractionStopFromEnd; i++) {
         const auto startConnectedInfill = prunedInfill[i];
-        const auto endConnectedInfill = prunedInfill[i + 1];
+        const auto endConnectedInfill = prunedInfill[(i + 1) % prunedInfill.size()];
         const auto startPointPair = startConnectedInfill.last();
         const auto endPointPair = endConnectedInfill.first();
         const auto startPoint = startPointPair.first;
@@ -614,47 +640,47 @@ void InfillPattern::honeycombInfill()
         QPolygonF contiguousData;
         QPointF currentPosition{startBoundary, y};
         while (currentPosition.x() <= endBoundary) {
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
             currentPosition.setX(currentPosition.x() + L);
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
             currentPosition += rightDown;
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
             currentPosition.setX(currentPosition.x() + L);
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
             currentPosition += rightUp;
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
         }
         currentPosition = QPointF{currentPosition.x() + L, y + rightDown.y() * 2 + d};
         while (currentPosition.x() >= startBoundary) {
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
             currentPosition.setX(currentPosition.x() - L);
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
             currentPosition += leftUp;
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
             currentPosition.setX(currentPosition.x() - L);
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
             currentPosition += leftDown;
-            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
+//            if (boundingPolygon.containsPoint(currentPosition, Qt::OddEvenFill)) {
                 contiguousData << currentPosition;
-            }
+//            }
         }
         if (contiguousData.size() > 2) {
             contiguousData << contiguousData.first();
@@ -798,7 +824,7 @@ void InfillPattern::update(QPolygonF &polygon)
         rectiLinearVerticalInfill();
         const auto prunedInfill = ::pruneInfill(data_.first(), inset_);
         data_.clear();
-        data_ << connectInfillAlongInset(prunedInfill, inset_);
+        data_ << connectInfillAlongInset(prunedInfill, inset_, false);
             break;
         }
         case Pattern::Concentric:
@@ -811,13 +837,14 @@ void InfillPattern::update(QPolygonF &polygon)
             gyroidInfill();
             break;
         case Pattern::HoneyComb: {
+        honeycombInfill();
 
         const auto copy = data_;
         data_.clear();
-        for (const auto cc : copy) {
-            pruneInfill(cc);
+        for (const auto& cc : copy) {
+            const auto prunedInfill = ::pruneInfill(cc, inset_);
+            data_ << connectInfillAlongInset(prunedInfill, inset_, true);
         }
-        honeycombInfill();
         break;
     }
     default:
