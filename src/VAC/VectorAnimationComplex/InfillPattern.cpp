@@ -2,8 +2,6 @@
 
 #include <optional>
 
-#include <QtAlgorithms>
-
 InfillPattern::InfillPattern() = default;
 
 InfillPattern::~InfillPattern() = default;
@@ -60,7 +58,7 @@ std::optional<QPointF> segmentSegmentIntersection(QPointF A, QPointF B, QPointF 
             || pointToLineSegmentDistanceSquared(A, C, D) == 0
             || pointToLineSegmentDistanceSquared(B, C, D) == 0
             || pointToLineSegmentDistanceSquared(C, A, B) == 0
-            ||pointToLineSegmentDistanceSquared(D, A, B) == 0) {
+            || pointToLineSegmentDistanceSquared(D, A, B) == 0) {
         const auto intersection = lineLineIntersection(A, B, C, D);
         return intersection;
     }
@@ -89,7 +87,7 @@ QVector<QPair<QPointF, int>> sortPointsByDistance(QPointF startPosition, const Q
     for (const auto foundIntersectionPoint: foundIntersectionPoints) {
         subtractedIntersectionPoints << QPair{foundIntersectionPoint.first - startPosition, foundIntersectionPoint.second};
     }
-    qSort(subtractedIntersectionPoints.begin(), subtractedIntersectionPoints.end(), QPointFLessThan);
+    std::sort(subtractedIntersectionPoints.begin(), subtractedIntersectionPoints.end(), QPointFLessThan);
     QVector<QPair<QPointF, int>> addedBackIntersectionPoints;
     for (const auto& intersection: subtractedIntersectionPoints) {
         addedBackIntersectionPoints << QPair{intersection.first + startPosition, intersection.second};
