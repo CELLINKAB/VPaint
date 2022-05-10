@@ -810,6 +810,17 @@ SurfaceType Scene::getLoadedSurfaceType()
     return surfaceType;
 }
 
+bool Scene::hasSceneContent() const
+{
+    for (auto layer : layers_)
+    {
+        if (layer && layer->vac()->instantVertices().count() > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Scene::deleteSelectedCells()
 {
     Layer * layer = activeLayer();

@@ -1103,6 +1103,7 @@ void View::endDrawShape()
     vac_->endDrawShape();
     vac_->deselectAll();
     scene()->emitCheckpoint();
+    emit scene()->changed();
 }
 
 void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
