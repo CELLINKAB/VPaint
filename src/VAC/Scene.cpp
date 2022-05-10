@@ -812,7 +812,7 @@ SurfaceType Scene::getLoadedSurfaceType()
 
 bool Scene::hasSceneContent() const
 {
-    for (auto layer: layers_)
+    for (auto layer : layers_)
     {
         if (layer && layer->vac()->instantVertices().count() > 0) {
             return true;
