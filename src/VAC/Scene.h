@@ -158,6 +158,8 @@ public:
 
     SurfaceType getLoadedSurfaceType();
 
+    bool hasSceneContent() const;
+
 public slots:
     // --------- Tools ----------
     void test();
