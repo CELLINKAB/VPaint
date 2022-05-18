@@ -1161,11 +1161,9 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
     switch (drawPhase) {
     case ShapeDrawPhase::DRAW_START:
     {
-        if (isMouseInSurface_) {
-            lastMousePos_ = QPoint(mouse_Event_X_, mouse_Event_Y_);
-            vac_->beginSketchEdge(xScene, yScene, w, interactiveTime());
-            emit allViewsNeedToUpdate();
-        }
+        lastMousePos_ = QPoint(mouse_Event_X_, mouse_Event_Y_);
+        vac_->beginSketchEdge(xScene, yScene, w, interactiveTime());
+        emit allViewsNeedToUpdate();
         break;
     }
     case ShapeDrawPhase::DRAW_PROCESS:
@@ -1387,7 +1385,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
     const auto xScene = pos.x();
     const auto yScene = pos.y();
 
-    if((currentMousePos - lastMousePos_).manhattanLength() < 3 || !global()->isPointInSurface(xScene, yScene))
+    if((currentMousePos - lastMousePos_).manhattanLength() < 3)
         return;
 
     using CellSet = VectorAnimationComplex::CellSet;
