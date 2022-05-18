@@ -39,6 +39,7 @@ public:
     Eigen::Vector2d pos(Time ) const
         { return pos(); }
     Eigen::Vector2d pos() const;
+    inline const Eigen::Vector2d& posBack() const { return posBack_; }
     //double size() const;
     //double size(Time time) const;
     void computePosFromEdges();

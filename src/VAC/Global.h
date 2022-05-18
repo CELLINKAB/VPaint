@@ -34,6 +34,7 @@
 #include <QLabel>
 #include <QDir>
 #include "VAC/vpaint_global.h"
+#include "VectorAnimationComplex/CellList.h"
 
 class QHBoxLayout;
 class DevSettings;
@@ -203,6 +204,23 @@ public:
     void calculateSnappedPosition(QPointF& pos);
     QPointF getSnappedPosition(double x, double y);
     QPointF getSnappedPosition(const QPointF& pos);
+
+    bool isPointInSurface(const double x, const double y) const;
+    bool isShapeInSurface(const VectorAnimationComplex::KeyVertexSet& vertices, const VectorAnimationComplex::KeyEdgeSet& edges, const QPointF delta) const;
+    bool isShapeInSurface(const QVector<QPointF>& vertices) const;
+
+    // A delta in millimeters used for moving shapes by
+    // keyboard arrow keys(default: 1.0 mm for both directions)
+    // If the grid snapping is enabled - delta will be the grid size
+    inline const QPointF& arrowKeysMoveDelta() const { return arrowKeysMoveDelta_; }
+    void setArrowKeysMoveDelta(const double delta);
+    void setArrowKeysMoveDelta(const double deltaX, const double deltaY);
+    void setArrowKeysMoveDelta(const QPointF& delta);
+
+    // Count of skipping samples when checking they on inscribe into surface for
+    // improve performance, because a curve line contains a lot of samples.
+    inline int skippingCurveSamples() const { return skippingCurveSamples_; }
+    void setSkippingCurveSamples(const int value);
 
     // Display modes
     enum DisplayMode {
@@ -375,8 +393,13 @@ private:
     double pasteDeltaX_;
     double pasteDeltaY_;
 
+    int skippingCurveSamples_;
+
     QRectF selectedGeometry_;
     QPointF mousePastePosition_;
+    QPointF sceneCenterPosition_;
+
+    QPointF arrowKeysMoveDelta_;
 
     VPaint::SurfaceType surfaceType_;
     QColor surfaceBackGroundColor_;

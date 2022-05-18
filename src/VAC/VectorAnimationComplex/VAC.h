@@ -104,6 +104,7 @@ public:
     const CellSet & selectedCells() const;
     const CellSet& hoveredCells() const;
     int numSelectedCells() const;
+    inline const bool hasSelectedCells() const { return selectedCells_.count() != 0; }
 
     // Get hovered transform widget id
     int hoveredTransformWidgetId() const;
@@ -162,6 +163,8 @@ public:
     void prepareDragAndDrop(double x0, double y0, Time time);
     void performDragAndDrop(double x, double y);
     void completeDragAndDrop(bool emitCheckpoint = true);
+    inline const KeyVertexSet& draggedVertices() const { return draggedVertices_; }
+    inline const KeyEdgeSet& draggedEdges() const { return draggedEdges_; }
 
     // -- Transform selection --
     void beginTransformSelection(double x0, double y0, Time time);
@@ -214,12 +217,17 @@ public:
 
     void calculateSelectedGeometry();
 
+    BoundingBox selectedBoundingBox() const;
+    BoundingBox selectedOutlineBoundingBox() const;
+
     void setManualWidth(double newWidth);
     void setManualHeight(double newHeight);
-    void setManualRotation(double angle);
+    bool setManualRotation(double angle);
 
     void assignShapeID(Cell* cell);
     void endDrawShape();
+
+    QPointF dragStartPosition() const;
 
     /////////////////////////////////////////////////////////////////
     //                 MOUSE CLIC ACTIONS                          //
@@ -505,7 +513,7 @@ private:
     bool isManualTransform_;
 
     int lastShapeID_;
-    QTimer* checkPointTimer;
+    QTimer* checkPointTimer_;
 };
 
 }

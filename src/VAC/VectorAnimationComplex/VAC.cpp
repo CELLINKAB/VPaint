@@ -278,9 +278,9 @@ void VAC::initNonCopyable()
     pasteDeltaX_ = 0;
     pasteDeltaY_ = 0;
     isManualTransform_ = false;
-    checkPointTimer = new QTimer(this);
-    checkPointTimer->setSingleShot(true);
-    connect(checkPointTimer, &QTimer::timeout, this, [this]() {
+    checkPointTimer_ = new QTimer(this);
+    checkPointTimer_->setSingleShot(true);
+    connect(checkPointTimer_, &QTimer::timeout, this, [this]() {
         emit changed();
         emit checkpoint();
     });
@@ -302,7 +302,7 @@ VAC::VAC() :
     pasteDeltaY_(0),
     isManualTransform_(false),
     lastShapeID_(0),
-    checkPointTimer(nullptr)
+    checkPointTimer_(nullptr)
 {
     initNonCopyable();
     initCopyable();
@@ -310,10 +310,11 @@ VAC::VAC() :
 
 VAC::~VAC()
 {
-    if (checkPointTimer != nullptr)
+    if (checkPointTimer_ != nullptr)
     {
-        delete checkPointTimer;
-        checkPointTimer = nullptr;
+        checkPointTimer_->stop();
+        delete checkPointTimer_;
+        checkPointTimer_ = nullptr;
     }
     deleteAllCells();
 }
@@ -1994,7 +1995,7 @@ void VAC::changeEdgesColor()
 
     if (emitCheckpoint)
     {
-        checkPointTimer->start(5);
+        checkPointTimer_->start(5);
     }
 }
 
@@ -2014,8 +2015,8 @@ void VAC::changeFacesColor()
 
     if (emitCheckpoint)
     {
-        checkPointTimer->stop();
-        checkPointTimer->start(5);
+        checkPointTimer_->stop();
+        checkPointTimer_->start(5);
     }
 }
 
@@ -2036,7 +2037,7 @@ void VAC::changeInfillColor()
 
     if (emitCheckpoint)
     {
-        checkPointTimer->stop();
+        checkPointTimer_->stop();
         emit changed();
         emit checkpoint();
     }
@@ -2093,6 +2094,30 @@ void VAC::calculateSelectedGeometry()
     }
 }
 
+BoundingBox VAC::selectedBoundingBox() const
+{
+    BoundingBox bb;
+    if (!selectedCells().empty()) {
+        for (auto cell : selectedCells())
+        {
+            bb.unite(cell->boundingBox(timeInteractivity_));
+        }
+    }
+    return bb;
+}
+
+BoundingBox VAC::selectedOutlineBoundingBox() const
+{
+    BoundingBox obb;
+    if (!selectedCells().empty()) {
+        for (auto cell : selectedCells())
+        {
+            obb.unite(cell->outlineBoundingBox(timeInteractivity_));
+        }
+    }
+    return obb;
+}
+
 void VAC::setManualWidth(double newWidth)
 {
     isManualTransform_ = true;
@@ -2107,11 +2132,14 @@ void VAC::setManualHeight(double newHeight)
     emit changed();
 }
 
-void VAC::setManualRotation(double angle)
+bool VAC::setManualRotation(double angle)
 {
     isManualTransform_ = true;
-    transformTool_.setManualRotation(angle, timeInteractivity_);
-    emit changed();
+    if (transformTool_.setManualRotation(angle, timeInteractivity_)) {
+        emit changed();
+        return true;
+    }
+    return false;
 }
 
 void VAC::assignShapeID(Cell* cell)
@@ -2122,6 +2150,11 @@ void VAC::assignShapeID(Cell* cell)
 void VAC::endDrawShape()
 {
     lastShapeID_ ++;
+}
+
+QPointF VAC::dragStartPosition() const
+{
+    return QPointF(x0_, y0_);
 }
 
 bool VAC::cutFace_(KeyFace * face, KeyEdge * edge, CutFaceFeedback * feedback)
