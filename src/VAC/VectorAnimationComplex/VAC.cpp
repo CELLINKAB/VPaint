@@ -1512,6 +1512,7 @@ void VAC::deleteCell(Cell * cell)
 
     // Finally, now that no pointers point to the cell, release memory
     delete cell;
+    cell = nullptr;
 }
 
 // Smart deletion and simplification
