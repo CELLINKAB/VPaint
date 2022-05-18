@@ -1379,6 +1379,7 @@ void View::adjustCellsColors()
 
 void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, double initialRotation, bool drawingCircle)
 {
+    auto isSuccess = false;
     const auto currentMousePos = QPoint(mouse_Event_X_, mouse_Event_Y_);
 
     const auto pos = global()->getSnappedPosition(x, y);
@@ -1433,7 +1434,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
         }
     };
 
-    auto processDrawShape = [this, &verticesPoints, &w, shapeType, &drawingCircle, &clearLastCells](bool isClosedShape = true)
+    auto processDrawShape = [this, &verticesPoints, &w, shapeType, &drawingCircle, &clearLastCells, &isSuccess](bool isClosedShape = true)
     {
         const auto verticesCount = verticesPoints.count();
 
@@ -1478,6 +1479,8 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
             drawingCircle ? faceCell->setShapeType(ShapeType::CIRCLE) : faceCell->setShapeType(shapeType);
             lastDrawnCells_ << faceCell->toFaceCell();
         }
+
+        isSuccess = true;
     };
 
     switch (shapeType) {
@@ -1556,9 +1559,12 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
         break;
     }
 
-    // Update the selection geometry for display the correct selection size when drawing
-    global()->updateSelectedGeometry(leftX, topY, shapeWidth, shapeHeight, true);
     lastMousePos_ = currentMousePos;
+
+    if (isSuccess) {
+        // Update the selection geometry for display the correct selection size when drawing
+        global()->updateSelectedGeometry(leftX, topY, shapeWidth, shapeHeight, true);
+    }
 }
 
 void View::updateView()
