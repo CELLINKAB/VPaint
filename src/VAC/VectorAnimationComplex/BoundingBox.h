@@ -257,6 +257,8 @@ public:
     // Comparison operators
     bool operator==(const BoundingBox & other) const;
     bool operator!=(const BoundingBox & other) const;
+
+    void reset();
     
 private:
     // Data members

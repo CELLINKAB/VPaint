@@ -405,7 +405,8 @@ TransformTool::TransformTool(QObject * parent) :
     draggingManualPivot_(false),
     dragAndDropping_(false),
     transforming_(false),
-    rotating_(false)
+    rotating_(false),
+    startTransformTime_{}
 {
     if (global()) {
       connect(global(), SIGNAL(keyboardModifiersChanged()), this, SLOT(onKeyboardModifiersChanged()));
@@ -817,6 +818,7 @@ namespace
 
 void TransformTool::beginTransform(double x0, double y0, Time time)
 {
+    startTransformTime_ = time;
     // Clear cached values
     draggedVertices_.clear();
     draggedEdges_.clear();
@@ -951,7 +953,7 @@ double scaleFactor_(double x, double x0, double xPivot, double dx)
 
 }
 
-void TransformTool::continueTransform(double x, double y, double angle)
+bool TransformTool::continueTransform(double x, double y, double angle)
 {
     // Cache mouse position
     x_ = x;
@@ -960,7 +962,7 @@ void TransformTool::continueTransform(double x, double y, double angle)
 
     // Return in trivial cases
     if (hovered() == None || cells_.isEmpty())
-        return;
+        return false;
 
     // Move pivot
     if (hovered() == Pivot)
@@ -1058,12 +1060,37 @@ void TransformTool::continueTransform(double x, double y, double angle)
         }
         else
         {
-            return;
+            return false;
         }
 
         // Make pivot point invariant by transformation
         Eigen::Translation2d pivot(xPivot, yPivot);
         xf = pivot * xf * pivot.inverse();
+
+
+        // Check if vertices of selected shapes will be inside the surface
+        for (const KeyVertex* vertex : qAsConst(draggedVertices_))
+        {
+            const auto newPosition =  xf * vertex->posBack();
+            if (!global()->isPointInSurface(newPosition[0], newPosition[1])) {
+                return false;
+            }
+        }
+
+        // Check if samples of edges of selected curves will be inside the surface
+        for (const KeyEdge* edge : qAsConst(draggedEdges_))
+        {
+            if (edge->shapeType() == ShapeType::CURVE) {
+                const auto samples = edge->geometry()->samplingBeforeTransform();
+                const auto inc = global()->skippingCurveSamples() + 1;
+                for (auto i = 0; i < samples.count(); i += inc)
+                {
+                    const auto newSample = xf * samples[i];
+                    if (!global()->isPointInSurface(newSample[0], newSample[1]))
+                        return false;
+                }
+            }
+        }
 
         // Apply affine transformation
         for(KeyEdge * e: qAsConst(draggedEdges_))
@@ -1086,6 +1113,7 @@ void TransformTool::continueTransform(double x, double y, double angle)
             yManualPivot_ = manualPivot[1];
         }
     }
+    return true;
 }
 
 void TransformTool::endTransform()
@@ -1173,7 +1201,7 @@ void TransformTool::setManualHeight(double newHeight, Time time)
     }
 }
 
-void TransformTool::setManualRotation(double angle, Time time)
+bool TransformTool::setManualRotation(double angle, Time time)
 {
     BoundingBox obb;
     for (auto cell : cells_)
@@ -1183,9 +1211,10 @@ void TransformTool::setManualRotation(double angle, Time time)
 
     hovered_ = TopLeftRotate;
     beginTransform(obb.xMin(), obb.yMin(), time);
-    continueTransform(obb.xMin(), obb.yMin(), angle);
+    const auto result = continueTransform(obb.xMin(), obb.yMin(), angle);
     endTransform();
     hovered_ = None;
+    return result;
 }
 
 void TransformTool::onKeyboardModifiersChanged()

@@ -610,11 +610,11 @@ void MainWindow::parseKeyPressEvent(QKeyEvent* event)
     }
     else if (keySequence == QKeySequence(QKeySequence::Delete))
     {
-        scene()->deleteSelectedCells();
+        scene()->smartDelete();
     }
     else if (keySequence == QKeySequence(Qt::CTRL + Qt::Key_Delete))
     {
-        scene()->smartDelete();
+        scene()->deleteSelectedCells();
     }
 
     event->ignore();
