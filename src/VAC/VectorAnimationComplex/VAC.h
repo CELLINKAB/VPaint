@@ -359,7 +359,7 @@ public:
     ShapeType shapeType(const CellSet & cells);
     QList<ShapeType> getSelectedShapeType();
     QList<ShapeType> getAllShapesType();
-
+    QList<QColor> selectedShapesColor();
     void setInfillDensityForSelectedCells(int density);
     void setInfillPatternForSelectedCells(InfillPattern::Pattern pattern);
 protected:
