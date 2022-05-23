@@ -1384,6 +1384,36 @@ QList<ShapeType> VAC::getAllShapesType()
     return types;
 }
 
+QList<QColor> VAC::selectedShapesColor()
+{
+    QList<QColor> colors;
+
+    for(auto cell : selectedCells())
+    {
+        QColor color;
+        if (cell->isIgnored())
+        {
+            color.setRgbF(cell->color_[0],cell->color_[1],cell->color_[2],cell->color_[3]);
+        }
+        else if (auto keyEdge = cell->toKeyEdge())
+        {
+            color = keyEdge->color();
+        }
+        else if (auto keyVertex = cell->toKeyVertex())
+        {
+            if (!global()->isShowVerticesOnSelection())
+            {
+                color = keyVertex->color();
+            }
+        }else
+        {
+            continue;
+        }
+        colors.append(color);
+    }
+    return colors;
+}
+
 QList<ShapeType> VAC::getSelectedShapeType()
 {
     QList<ShapeType> types;
