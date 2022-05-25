@@ -1563,7 +1563,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
 
     if (isSuccess) {
         // Update the selection geometry for display the correct selection size when drawing
-        global()->updateSelectedGeometry(leftX, topY, shapeWidth, shapeHeight, true);
+        global()->updateSelectedGeometry(leftX, topY, shapeWidth, shapeHeight, 0.0);
     }
 }
 

@@ -168,7 +168,10 @@ public:
     void setPasteDelta(double delta);
 
     inline const QRectF& selectedGeometry() const { return selectedGeometry_; }
-    void updateSelectedGeometry(double x, double y, double w, double h, bool isInteractive = false);
+    inline const double selectedRotation() const { return selectedRotation_; }
+    void updateSelectedGeometry(double x, double y, double w, double h, double rotation);
+    void updateSelectedGeometry(double x, double y, double w, double h);
+    void updateSelectedGeometry();
 
     inline const QPointF& mousePastePosition() const { return mousePastePosition_; }
     void storeMousePastePos();
@@ -392,6 +395,7 @@ private:
 
     double pasteDeltaX_;
     double pasteDeltaY_;
+    double selectedRotation_;
 
     int skippingCurveSamples_;
 

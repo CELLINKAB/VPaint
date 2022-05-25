@@ -345,6 +345,9 @@ public:
     inline const bool isIgnored() const { return isIgnored_; }
     void setIgnored(bool ignored);
 
+    inline const double rotation() const { return rotation_; }
+    void setRotation(const double newRotation);
+
 protected:
     // Make a call to  glColor, taking into account the member
     // color,  the selected state  and the  highlighted state.
@@ -443,6 +446,7 @@ private:
     ShapeType shapeType_;
     int shapeID_;
     bool isIgnored_;
+    double rotation_;
 };
     
 }
