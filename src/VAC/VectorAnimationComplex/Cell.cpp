@@ -51,7 +51,7 @@ namespace VectorAnimationComplex
 
 Cell::Cell(VAC * vac) :
     vac_(vac), id_(-1),
-    isHovered_(0), isSelected_(0), shapeType_(ShapeType::NONE),  shapeID_(0), isIgnored_(false)
+    isHovered_(0), isSelected_(0), shapeType_(ShapeType::NONE),  shapeID_(0), isIgnored_(false), rotation_(0.0)
 {
     colorHighlighted_[0] = 1;
     colorHighlighted_[1] = 0.7;
@@ -180,6 +180,7 @@ Cell::Cell(Cell * other)
     shapeType_ = other->shapeType_;
     shapeID_ = other->shapeID_;
     isIgnored_ = other->isIgnored_;
+    rotation_ = other->rotation_;
 }
 
 void Cell::remapPointers(VAC * newVAC)
@@ -240,6 +241,11 @@ void Cell::setShapeID(const int id)
 void Cell::setIgnored(bool ignored)
 {
     isIgnored_ = ignored;
+}
+
+void Cell::setRotation(const double newRotation)
+{
+    rotation_ = newRotation;
 }
 
 void Cell::setColor(const QColor& c)
@@ -797,6 +803,7 @@ void Cell::write(XmlStreamWriter & xml) const
     xml.writeAttribute("shapeID", QString().setNum(shapeID()));
     xml.writeAttribute("shapeType", QString().setNum(static_cast<int>(shapeType())));
     xml.writeAttribute("isIgnored", QString().setNum(isIgnored()));
+    xml.writeAttribute("rotation", QString().setNum(rotation()));
     write_(xml);
     CssColor cssColor(color_);
     CssColor cssColorSelected(colorSelected_);
@@ -825,6 +832,7 @@ Cell::Cell(VAC * vac, XmlStreamReader & xml) :
     shapeID_ = xml.attributes().value("shapeID").toInt();
     shapeType_ = static_cast<ShapeType>(xml.attributes().value("shapeType").toInt());
     isIgnored_ = xml.attributes().value("isIgnored").toInt();
+    rotation_ = xml.attributes().value("rotation").toDouble();
 
     if(xml.attributes().hasAttribute("color"))
     {

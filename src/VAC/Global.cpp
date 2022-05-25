@@ -86,6 +86,7 @@ Global::Global(MainWindow * w) :
     gridSize_(1.0),
     pasteDeltaX_(15),
     pasteDeltaY_(15),
+    selectedRotation_(0.0),
     skippingCurveSamples_(2),
     selectedGeometry_{0.0, 0.0, 0.0, 0.0},
     mousePastePosition_{0.0, 0.0},
@@ -1008,19 +1009,26 @@ void Global::setPasteDelta(double delta)
     pasteDeltaY_ = delta;
 }
 
-// Update the selection geometry for display the correct selection size in the Shape parameter bar
-// And emitting signal if selection geometry was changed interactive(when drawing and transforming)
-void Global::updateSelectedGeometry(double x, double y, double w, double h, bool isInteractive)
+// Update the selection geometry for display the correct selection size/rotation in the Shape parameter bar
+void Global::updateSelectedGeometry(double x, double y, double w, double h, double rotation)
+{
+    selectedRotation_ = rotation;
+    updateSelectedGeometry(x, y, w, h);
+}
+
+void Global::updateSelectedGeometry(double x, double y, double w, double h)
 {
     selectedGeometry_.setX(x);
     selectedGeometry_.setY(y);
     selectedGeometry_.setWidth(w);
     selectedGeometry_.setHeight(h);
 
-    if (isInteractive)
-    {
-        emit interactiveGeometryChanged();
-    }
+    updateSelectedGeometry();
+}
+
+void Global::updateSelectedGeometry()
+{
+    emit interactiveGeometryChanged();
 }
 
 // Storing the mouse position on scene for be able to paste in right position

@@ -222,7 +222,7 @@ public:
 
     void setManualWidth(double newWidth);
     void setManualHeight(double newHeight);
-    bool setManualRotation(double angle);
+    void setManualRotation(double angle);
 
     void assignShapeID(Cell* cell);
     void endDrawShape();
@@ -509,8 +509,6 @@ private:
 
     double pasteDeltaX_;
     double pasteDeltaY_;
-
-    bool isManualTransform_;
 
     int lastShapeID_;
     QTimer* checkPointTimer_;
