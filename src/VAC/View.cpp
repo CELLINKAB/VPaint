@@ -77,6 +77,8 @@ const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
 const constexpr auto POLYGON_ARROUND_ALPHA = 0;
 const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
 const constexpr auto DRAW_CIRCLES_AS_CURVES = false;
+// Used to restrict the ability to draw very small shapes
+const constexpr auto MIN_MOUSE_MOVE_TO_DRAW = 5;
 }
 
 View::View(VPaint::Scene * scene, QWidget * parent) :
@@ -1171,7 +1173,7 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_PROCESS:
     {
         const auto currentMousePos = QPoint(mouse_Event_X_, mouse_Event_Y_);
-        if((currentMousePos - lastMousePos_).manhattanLength() < 5)
+        if((currentMousePos - lastMousePos_).manhattanLength() < MIN_MOUSE_MOVE_TO_DRAW)
             return;
 
         if (global()->isPointInSurface(xScene, yScene)) {
@@ -1395,7 +1397,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
     const auto xScene = pos.x();
     const auto yScene = pos.y();
 
-    if((currentMousePos - lastMousePos_).manhattanLength() < 3)
+    if((currentMousePos - lastMousePos_).manhattanLength() < MIN_MOUSE_MOVE_TO_DRAW)
         return;
 
     using CellSet = VectorAnimationComplex::CellSet;
