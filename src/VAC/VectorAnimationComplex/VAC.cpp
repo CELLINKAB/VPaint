@@ -1355,16 +1355,16 @@ void VAC::smartDelete_(const CellSet & cellsToDelete)
 
 QList<ShapeType> VAC::getAllShapesType()
 {
-    QList<ShapeType> types;
-    KeyFaceSet keyFaces = faces();
-    for (auto face : keyFaces)
+    QMap<int, ShapeType> types;
+    const auto keyVertices = instantVertices();
+    for (const auto keyVertex : keyVertices)
     {
-        if (!face->isIgnored())
+        if (!keyVertex->isIgnored())
         {
-            types.append(face->shapeType());
+            types.insert(keyVertex->shapeID(), keyVertex->shapeType());
         }
     }
-    return types;
+    return types.values();
 }
 
 QList<QColor> VAC::selectedShapesColor()
@@ -1399,22 +1399,27 @@ QList<QColor> VAC::selectedShapesColor()
 
 QList<ShapeType> VAC::getSelectedShapeType()
 {
-    QList<ShapeType> types;
-    KeyFaceSet keyVertices = selectedCells_;
-    for( auto vertex : keyVertices)
+    QMap<int, ShapeType> types;
+    const KeyVertexSet keyVertices = selectedCells_;
+    for (const auto keyVertex : keyVertices)
     {
-        types.append(vertex->shapeType());
+        if (!keyVertex->isIgnored())
+        {
+            types.insert(keyVertex->shapeID(), keyVertex->shapeType());
+        }
     }
-    return types;
+    return types.values();
 }
 
 ShapeType VAC::shapeType(const CellSet & cells)
 {
-    KeyFaceSet keyVertices = cells;
-    for( auto vertex : keyVertices)
+    const KeyVertexSet keyVertices = cells;
+    for(const auto keyVertex : keyVertices)
     {
-        ShapeType type =  vertex->shapeType();
-        return type;
+        if (!keyVertex->isIgnored()) {
+            ShapeType type = keyVertex->shapeType();
+            return type;
+        }
     }
     return ShapeType::NONE;
 }
