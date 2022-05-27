@@ -889,6 +889,7 @@ void Scene::setActiveLayer(int i)
         emitChanged();
         emit needUpdatePicking();
         emit layerAttributesChanged();
+        emitCheckpoint();
     }
 }
 
@@ -920,6 +921,7 @@ Layer * Scene::createLayer()
 }
 void Scene::addLayer(Layer * layer )
 {
+    deselectAll();
     addLayer_(layer, true);
 
     // Move above active layer, or keep last if no active layer
@@ -941,8 +943,7 @@ void Scene::addLayer(Layer * layer )
     emitChanged();
     emit needUpdatePicking();
     emit layerAttributesChanged();
-
-    if (activeLayerIndex_ > 0) {
+    if (layers_.size() > 1) {
         emitCheckpoint();
     }
 }
@@ -1028,7 +1029,7 @@ void Scene::destroyLayer(const int index)
             activeLayerIndex_ = 0;
             activeLayer()->background()->setOpacity(1.0);
         }
-        else
+        else if (index <= activeLayerIndex_)
         {
             // had layer below
             --activeLayerIndex_;
@@ -1039,6 +1040,7 @@ void Scene::destroyLayer(const int index)
         emitChanged();
         emit needUpdatePicking();
         emit layerAttributesChanged();
+        emitCheckpoint();
     }
 }
 
