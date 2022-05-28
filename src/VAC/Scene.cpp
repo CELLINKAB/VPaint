@@ -889,6 +889,7 @@ void Scene::setActiveLayer(int i)
         emitChanged();
         emit needUpdatePicking();
         emit layerAttributesChanged();
+        emitCheckpoint();
     }
 }
 
@@ -920,6 +921,7 @@ Layer * Scene::createLayer()
 }
 void Scene::addLayer(Layer * layer )
 {
+    deselectAll();
     addLayer_(layer, true);
 
     // Move above active layer, or keep last if no active layer
@@ -941,6 +943,9 @@ void Scene::addLayer(Layer * layer )
     emitChanged();
     emit needUpdatePicking();
     emit layerAttributesChanged();
+    if (layers_.size() > 1) {
+        emitCheckpoint();
+    }
 }
 
 Layer * Scene::createLayer(const QString & name)
@@ -999,13 +1004,17 @@ void Scene::moveActiveLayerDown()
 
 void Scene::destroyActiveLayer()
 {
-    int i = activeLayerIndex_;
-    if(0 <= i && i < numLayers())
+    destroyLayer(activeLayerIndex_);
+}
+
+void Scene::destroyLayer(const int index)
+{
+    if (0 <= index && index < numLayers())
     {
         deselectAll();
 
-        Layer * toBeDestroyedLayer = layers_[i];
-        layers_.removeAt(i);
+        Layer* toBeDestroyedLayer = layers_[index];
+        layers_.removeAt(index);
 
         // Set as active the layer below, unless it was the bottom-most layer
         // or the only layer in the scene.
@@ -1020,7 +1029,7 @@ void Scene::destroyActiveLayer()
             activeLayerIndex_ = 0;
             activeLayer()->background()->setOpacity(1.0);
         }
-        else
+        else if (index <= activeLayerIndex_)
         {
             // had layer below
             --activeLayerIndex_;
@@ -1031,6 +1040,7 @@ void Scene::destroyActiveLayer()
         emitChanged();
         emit needUpdatePicking();
         emit layerAttributesChanged();
+        emitCheckpoint();
     }
 }
 

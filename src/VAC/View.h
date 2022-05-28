@@ -205,6 +205,8 @@ private:
     double lastDragX_;
     double lastDragY_;
 
+    int startDrawVertexCount;
+
     VectorAnimationComplex::CellSet lastDrawnCells_;
 
     // Dirty implementation:

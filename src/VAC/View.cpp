@@ -77,6 +77,8 @@ const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
 const constexpr auto POLYGON_ARROUND_ALPHA = 0;
 const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
 const constexpr auto DRAW_CIRCLES_AS_CURVES = false;
+// Used to restrict the ability to draw very small shapes
+const constexpr auto MIN_MOUSE_MOVE_TO_DRAW = 5;
 }
 
 View::View(VPaint::Scene * scene, QWidget * parent) :
@@ -90,6 +92,7 @@ View::View(VPaint::Scene * scene, QWidget * parent) :
     shapeStartY_(0),
     lastDragX_(0.0),
     lastDragY_(0.0),
+    startDrawVertexCount(0),
     vac_(0)
 {
     // View settings widget
@@ -1164,10 +1167,15 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
         lastMousePos_ = QPoint(mouse_Event_X_, mouse_Event_Y_);
         vac_->beginSketchEdge(xScene, yScene, w, interactiveTime());
         emit allViewsNeedToUpdate();
+        startDrawVertexCount = vac_->instantVertices().count();
         break;
     }
     case ShapeDrawPhase::DRAW_PROCESS:
     {
+        const auto currentMousePos = QPoint(mouse_Event_X_, mouse_Event_Y_);
+        if((currentMousePos - lastMousePos_).manhattanLength() < MIN_MOUSE_MOVE_TO_DRAW)
+            return;
+
         if (global()->isPointInSurface(xScene, yScene)) {
             vac_->continueSketchEdge(xScene, yScene, w);
         } else {
@@ -1181,6 +1189,9 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_END:
     {
         vac_->endSketchEdge(false);
+        if (vac_->instantVertices().count() - startDrawVertexCount < 2)
+            break;
+
         lastDrawnCells_.clear();
         auto keyVertices = vac_->instantVertices();
         auto keyEdges = vac_->instantEdges();
@@ -1386,7 +1397,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
     const auto xScene = pos.x();
     const auto yScene = pos.y();
 
-    if((currentMousePos - lastMousePos_).manhattanLength() < 3)
+    if((currentMousePos - lastMousePos_).manhattanLength() < MIN_MOUSE_MOVE_TO_DRAW)
         return;
 
     using CellSet = VectorAnimationComplex::CellSet;
@@ -1444,11 +1455,14 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
 
         clearLastCells();
 
+        const auto actualShapeType = drawingCircle ? ShapeType::CIRCLE : shapeType;
+
         //Draw Vertices
         QVector<Vertex*> vertices;
         for (auto point : verticesPoints)
         {
             auto vertex = vac_->newKeyVertex(interactiveTime(), Eigen::Vector2d(point.x(), point.y()));
+            vertex->setShapeType(actualShapeType);
             vertex->setColor(global()->edgeColor());
 
             vertices << vertex;
@@ -1460,23 +1474,25 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
         for (auto i = 0; i < verticesCount - 1; i++)
         {
             auto keyEdge = vac_->newKeyEdge(interactiveTime(), vertices[i], vertices[i + 1], 0, w);
+            keyEdge->setShapeType(actualShapeType);
             edges << keyEdge;
             lastDrawnCells_ << keyEdge;
         }
         if (isClosedShape)
         {
             auto keyEdge = vac_->newKeyEdge(interactiveTime(), vertices[verticesCount - 1], vertices[0], 0, w);
+            keyEdge->setShapeType(actualShapeType);
             edges << keyEdge;
             lastDrawnCells_ << keyEdge;
         }
 
         //Draw face
-        if (global()->isDrawShapeFaceEnabled())
+        if (global()->isDrawShapeFaceEnabled() && isClosedShape)
         {
             Cycle cycle(edges);
             auto faceCell = vac_->newKeyFace(cycle);
             faceCell->setColor(global()->faceColor());
-            drawingCircle ? faceCell->setShapeType(ShapeType::CIRCLE) : faceCell->setShapeType(shapeType);
+            faceCell->setShapeType(actualShapeType);
             lastDrawnCells_ << faceCell->toFaceCell();
         }
 

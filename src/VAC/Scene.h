@@ -125,6 +125,7 @@ public:
 
     // destroy the given layer
     void destroyActiveLayer();
+    void destroyLayer(const int index);
     
     // GUI
     void populateToolBar(QToolBar * toolBar);
