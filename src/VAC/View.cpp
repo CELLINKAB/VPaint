@@ -646,7 +646,7 @@ void View::PMRPressEvent(int action, double x, double y)
     // for mouse PMR actions
     global()->setSceneCursorPos(Eigen::Vector2d(x,y));
 
-    if (!isMouseInSurface_)
+    if (action != TRANSFORM_SELECTION_ACTION && !isMouseInSurface_)
         return;
 
     if(action==SKETCH_ACTION)
