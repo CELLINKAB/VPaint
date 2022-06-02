@@ -109,7 +109,7 @@ public:
     Layer* layer(int i) const;
 
     // Active layer
-    void setActiveLayer(int i);
+    void setActiveLayer(int i, bool needEmitCheckpoint = false);
     Layer * activeLayer() const;
     int activeLayerIndex() const; // returns -1 if no active layers.
     VectorAnimationComplex::VAC * activeVAC() const;
@@ -119,7 +119,7 @@ public:
     // Set as active layer
     Layer * createLayer();
     Layer * createLayer(const QString & name);
-    void addLayer(Layer * layer );
+    void addLayer(Layer* layer, bool setActiveOnTop = true);
     void moveActiveLayerUp();
     void moveActiveLayerDown();
 

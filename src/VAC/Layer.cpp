@@ -233,11 +233,6 @@ void Layer::write(XmlStreamWriter & xml)
     xml.writeEndElement();
 }
 
-QString Layer::name() const
-{
-    return name_;
-}
-
 void Layer::setName(const QString & newName)
 {
     if (newName != name_)

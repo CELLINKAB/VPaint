@@ -462,6 +462,7 @@ void Scene::setHoveredObject(Time time, int index, int id)
 
 void Scene::setNoHoveredObject()
 {
+    indexHovered_ = indexHovered_ >= 0 && indexHovered_ < numLayers() ? indexHovered_ : -1;
     if(indexHovered_ != -1)
     {
         layers_[indexHovered_]->setNoHoveredObject();
@@ -471,17 +472,23 @@ void Scene::setNoHoveredObject()
 
 void Scene::select(Time time, int index, int id)
 {
-    layers_[index]->select(time, id);
+    if (index >= 0 && index < numLayers()) {
+        layers_[index]->select(time, id);
+    }
 }
 
 void Scene::deselect(Time time, int index, int id)
 {
-    layers_[index]->deselect(time, id);
+    if (index >= 0 && index < numLayers()) {
+        layers_[index]->deselect(time, id);
+    }
 }
 
 void Scene::toggle(Time time, int index, int id)
 {
-    layers_[index]->toggle(time, id);
+    if (index >= 0 && index < numLayers()) {
+        layers_[index]->toggle(time, id);
+    }
 }
 
 void Scene::deselectAll(Time time)
@@ -878,7 +885,7 @@ Layer* Scene::layer(int i) const
     }
 }
 
-void Scene::setActiveLayer(int i)
+void Scene::setActiveLayer(int i, bool needEmitCheckpoint)
 {
     if(i != activeLayerIndex_ && 0 <= i && i < numLayers())
     {
@@ -889,7 +896,9 @@ void Scene::setActiveLayer(int i)
         emitChanged();
         emit needUpdatePicking();
         emit layerAttributesChanged();
-        emitCheckpoint();
+        if (needEmitCheckpoint) {
+            emitCheckpoint();
+        }
     }
 }
 
@@ -919,14 +928,15 @@ Layer * Scene::createLayer()
 {
     return createLayer(tr("Layer %1").arg(numLayers() + 1));
 }
-void Scene::addLayer(Layer * layer )
+
+void Scene::addLayer(Layer * layer , bool setActiveOnTop)
 {
     deselectAll();
     addLayer_(layer, true);
 
     // Move above active layer, or keep last if no active layer
     int newActiveLayerIndex = layers_.size() - 1;
-    if (0 <= activeLayerIndex_ && activeLayerIndex_ < newActiveLayerIndex - 1)
+    if (!setActiveOnTop && 0 <= activeLayerIndex_ && activeLayerIndex_ < newActiveLayerIndex - 1)
     {
         newActiveLayerIndex = activeLayerIndex_ + 1;
         for (int i = layers_.size() - 1; i > newActiveLayerIndex; --i)

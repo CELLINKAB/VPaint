@@ -67,7 +67,7 @@ public:
     Background * background() const { return background_; }
     VectorAnimationComplex::VAC * vac() const { return vac_; }
 
-    QString name() const;
+    inline const QString& name() const { return name_; }
     void setName(const QString & name);
 
     bool isVisible() const;
