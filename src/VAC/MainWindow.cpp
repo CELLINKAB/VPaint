@@ -444,7 +444,7 @@ void MainWindow::undo()
     if(undoIndex_>0)
     {
         goToUndoIndex_(undoIndex_ - 1);
-        emit undoCompleted(scene_->activeLayer()->name());
+        emit undoCompleted();
     }
     else
     {
@@ -457,7 +457,7 @@ void MainWindow::redo()
     if(undoIndex_<undoStack_.size()-1)
     {
         goToUndoIndex_(undoIndex_ + 1);
-        emit redoCompleted(scene_->activeLayer()->name());
+        emit redoCompleted();
     }
     else
     {
@@ -468,7 +468,7 @@ void MainWindow::redo()
 void MainWindow::cut()
 {
     scene_->cut(clipboard_);
-    scene_->emitShapesUpdated(scene_->activeLayer()->name());
+    scene_->emitShapesUpdated();
 }
 
 void MainWindow::copy()
@@ -479,7 +479,7 @@ void MainWindow::copy()
 void MainWindow::paste(bool isMousePaste)
 {
     scene_->paste(clipboard_, isMousePaste);
-    scene_->emitShapesUpdated(scene_->activeLayer()->name());
+    scene_->emitShapesUpdated();
 }
 
 void MainWindow::motionPaste()

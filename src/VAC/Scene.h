@@ -91,9 +91,9 @@ public:
     // Emit signals
     void emitChanged() {emit changed();}
     void emitCheckpoint() {emit checkpoint();}
-    void emitShapeDrawn(ShapeType type) { emit shapeDrawn(type);}
-    void emitShapeDelete(ShapeType type) { emit shapeDeleted(type);}
-    void emitShapesUpdated(const QString& layerName) { emit shapesUpdated(layerName);}
+    void emitShapeDrawn() { emit shapeDrawn();}
+    void emitShapeDelete() { emit shapeDeleted();}
+    void emitShapesUpdated() { emit shapesUpdated();}
     // Save and load
     void exportSVG(Time t, QTextStream & out);
     void save(QTextStream & out);
@@ -238,9 +238,9 @@ signals:
 
     void selectionChanged();
     void layerAttributesChanged();
-    void shapeDrawn(ShapeType type);
-    void shapeDeleted(ShapeType type);
-    void shapesUpdated(const QString& layerName);
+    void shapeDrawn();
+    void shapeDeleted();
+    void shapesUpdated();
 private:
     // Layers are ordered back to front,
     // Example: layers_[0] is the bottom-most layer, rendered first

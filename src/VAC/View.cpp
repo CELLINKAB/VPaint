@@ -1147,6 +1147,7 @@ void View::endDrawShape()
     vac_->deselectAll();
     scene()->emitCheckpoint();
     emit scene()->changed();
+    scene()->emitShapeDrawn();
 }
 
 void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
@@ -1223,7 +1224,6 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
                 lastDrawnCells_ << lastEdge;
             }
             endDrawShape();
-            scene()->emitShapeDrawn(ShapeType::CURVE);
         }
         break;
     }
@@ -1245,7 +1245,6 @@ void View::drawLine(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_END:
     {
         endDrawShape();
-        scene()->emitShapeDrawn(ShapeType::LINE);
         break;
     }
     default:
@@ -1274,7 +1273,6 @@ void View::drawCircle(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_END:
     {
         endDrawShape();
-        scene()->emitShapeDrawn(ShapeType::CIRCLE);
         break;
     }
     default:
@@ -1295,7 +1293,6 @@ void View::drawTriangle(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_END:
     {
         endDrawShape();
-        scene()->emitShapeDrawn(ShapeType::TRIANGLE);
         break;
     }
     default:
@@ -1316,7 +1313,6 @@ void View::drawRectangle(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_END:
     {
          endDrawShape();
-         scene()->emitShapeDrawn(ShapeType::RECTANGLE);
          break;
     }
     default:
@@ -1371,7 +1367,6 @@ void View::drawPolygon(double x, double y, int countAngles, double rotation, Sha
             keyEdge->setSelectedColor(boundingColor);
         }
         endDrawShape();
-        scene()->emitShapeDrawn(ShapeType::POLYGON);
         break;
     }
     default:
