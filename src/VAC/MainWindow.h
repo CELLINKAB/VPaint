@@ -88,8 +88,8 @@ private:
 
 signals:
     void undoRedoPossibilityUpdated(bool isUndoPossible, bool isRedoPossible);
-    void undoCompleted(const QString& layerName);
-    void redoCompleted(const QString& layerName);
+    void undoCompleted();
+    void redoCompleted();
 
 protected:
     void closeEvent(QCloseEvent * event);

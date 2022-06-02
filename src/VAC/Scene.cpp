@@ -838,7 +838,7 @@ void Scene::deleteSelectedCells()
         for(auto shapeType : shapesType)
         if(shapeType != ShapeType::NONE)
         {
-            emitShapeDelete(shapeType);
+            emitShapeDelete();
         }
     }
 }
@@ -863,7 +863,7 @@ void Scene::smartDelete()
         for(auto shapeType : shapesType)
         if(shapeType != ShapeType::NONE)
         {
-            emitShapeDelete(shapeType);
+            emitShapeDelete();
         }
     }
 }
