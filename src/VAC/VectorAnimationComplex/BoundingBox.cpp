@@ -183,4 +183,12 @@ bool BoundingBox::operator!=(const BoundingBox & other) const
     return !(*this == other);
 }
 
+void BoundingBox::reset()
+{
+    xMin_ = INF;
+    xMax_ = -INF;
+    yMin_ = INF;
+    yMax_ = -INF;
+}
+
 }

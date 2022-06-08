@@ -77,6 +77,8 @@ const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
 const constexpr auto POLYGON_ARROUND_ALPHA = 0;
 const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
 const constexpr auto DRAW_CIRCLES_AS_CURVES = false;
+// Used to restrict the ability to draw very small shapes
+const constexpr auto MIN_MOUSE_MOVE_TO_DRAW = 5;
 }
 
 View::View(VPaint::Scene * scene, QWidget * parent) :
@@ -84,9 +86,13 @@ View::View(VPaint::Scene * scene, QWidget * parent) :
     scene_(scene),
     pickingImg_(0),
     pickingIsEnabled_(true),
+    isMouseInSurface_(true),
     currentAction_(0),
     shapeStartX_(0),
     shapeStartY_(0),
+    lastDragX_(0.0),
+    lastDragY_(0.0),
+    startDrawVertexCount(0),
     vac_(0)
 {
     // View settings widget
@@ -153,6 +159,30 @@ void View::resizeGL(int width, int height)
 void View::keyPressEvent(QKeyEvent *event)
 {
     event->ignore();
+
+    const auto moveDeltaX = global()->isGridSnapping() ?
+                                global()->gridSizeMM() :
+                                global()->arrowKeysMoveDelta().x();
+    const auto moveDeltaY = global()->isGridSnapping() ?
+                                global()->gridSizeMM() :
+                                global()->arrowKeysMoveDelta().y();
+
+    switch(event->key()){
+    case Qt::Key_Up:
+        moveSelected(0, -moveDeltaY);
+        break;
+    case Qt::Key_Down:
+        moveSelected(0, moveDeltaY);
+        break;
+    case Qt::Key_Right:
+        moveSelected(moveDeltaX, 0);
+        break;
+    case Qt::Key_Left:
+        moveSelected(-moveDeltaX, 0);
+        break;
+    default:
+        break;
+    }
 }
 
 
@@ -542,6 +572,9 @@ void View::MoveEvent(double x, double y)
     bool mustRedraw = false;
     global()->setSceneCursorPos(Eigen::Vector2d(x,y));
 
+    isMouseInSurface_ = global()->isPointInSurface(x, y);
+    update();
+
     // Update highlighted object
     bool hoveredObjectChanged = updateHoveredObject(mouse_Event_X_, mouse_Event_Y_);
     if(hoveredObjectChanged)
@@ -613,6 +646,9 @@ void View::PMRPressEvent(int action, double x, double y)
     // for mouse PMR actions
     global()->setSceneCursorPos(Eigen::Vector2d(x,y));
 
+    if (action != TRANSFORM_SELECTION_ACTION && !isMouseInSurface_)
+        return;
+
     if(action==SKETCH_ACTION)
     {
         // here, possibly,  the scene  has several layers  that it
@@ -641,6 +677,8 @@ void View::PMRPressEvent(int action, double x, double y)
     }
     else if(action==DRAG_AND_DROP_ACTION)
     {
+        lastDragX_ = x;
+        lastDragY_ = y;
         vac_->prepareDragAndDrop(mouse_PressEvent_XScene_, mouse_PressEvent_YScene_, interactiveTime());
     }
     else if(action==TRANSFORM_SELECTION_ACTION)
@@ -755,7 +793,12 @@ void View::PMRMoveEvent(int action, double x, double y)
 
     if(action==DRAG_AND_DROP_ACTION)
     {
-        vac_->performDragAndDrop(x, y);
+        // Check if a new position of the shape will be inside the surfaces area
+        if (global()->isShapeInSurface(vac_->draggedVertices(), vac_->draggedEdges(), QPointF(x - lastDragX_, y - lastDragY_))) {
+            vac_->performDragAndDrop(x, y);
+            lastDragX_ = x;
+            lastDragY_ = y;
+        }
     }
     else if(action==TRANSFORM_SELECTION_ACTION)
     {
@@ -1103,6 +1146,8 @@ void View::endDrawShape()
     vac_->endDrawShape();
     vac_->deselectAll();
     scene()->emitCheckpoint();
+    emit scene()->changed();
+    scene()->emitShapeDrawn();
 }
 
 void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
@@ -1123,16 +1168,31 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
         lastMousePos_ = QPoint(mouse_Event_X_, mouse_Event_Y_);
         vac_->beginSketchEdge(xScene, yScene, w, interactiveTime());
         emit allViewsNeedToUpdate();
+        startDrawVertexCount = vac_->instantVertices().count();
         break;
     }
     case ShapeDrawPhase::DRAW_PROCESS:
     {
-        vac_->continueSketchEdge(xScene, yScene, w);
+        const auto currentMousePos = QPoint(mouse_Event_X_, mouse_Event_Y_);
+        if((currentMousePos - lastMousePos_).manhattanLength() < MIN_MOUSE_MOVE_TO_DRAW)
+            return;
+
+        if (global()->isPointInSurface(xScene, yScene)) {
+            vac_->continueSketchEdge(xScene, yScene, w);
+        } else {
+            // Stop drawing a curve if mouse out of surface, because the curve will
+            // be able to be visible outside the surface area, if continue moving the pressed
+            // mouse outside the surface and return back to the surface area.
+            forcedMouseRelease();
+        }
         break;
     }
     case ShapeDrawPhase::DRAW_END:
     {
         vac_->endSketchEdge(false);
+        if (vac_->instantVertices().count() - startDrawVertexCount < 2)
+            break;
+
         lastDrawnCells_.clear();
         auto keyVertices = vac_->instantVertices();
         auto keyEdges = vac_->instantEdges();
@@ -1164,7 +1224,6 @@ void View::drawCurve(double x, double y, ShapeDrawPhase drawPhase)
                 lastDrawnCells_ << lastEdge;
             }
             endDrawShape();
-            scene()->emitShapeDrawn(ShapeType::CURVE);
         }
         break;
     }
@@ -1186,7 +1245,6 @@ void View::drawLine(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_END:
     {
         endDrawShape();
-        scene()->emitShapeDrawn(ShapeType::LINE);
         break;
     }
     default:
@@ -1215,7 +1273,6 @@ void View::drawCircle(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_END:
     {
         endDrawShape();
-        scene()->emitShapeDrawn(ShapeType::CIRCLE);
         break;
     }
     default:
@@ -1236,7 +1293,6 @@ void View::drawTriangle(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_END:
     {
         endDrawShape();
-        scene()->emitShapeDrawn(ShapeType::TRIANGLE);
         break;
     }
     default:
@@ -1257,7 +1313,6 @@ void View::drawRectangle(double x, double y, ShapeDrawPhase drawPhase)
     case ShapeDrawPhase::DRAW_END:
     {
          endDrawShape();
-         scene()->emitShapeDrawn(ShapeType::RECTANGLE);
          break;
     }
     default:
@@ -1312,7 +1367,6 @@ void View::drawPolygon(double x, double y, int countAngles, double rotation, Sha
             keyEdge->setSelectedColor(boundingColor);
         }
         endDrawShape();
-        scene()->emitShapeDrawn(ShapeType::POLYGON);
         break;
     }
     default:
@@ -1331,21 +1385,23 @@ void View::adjustCellsColors()
 
 void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, double initialRotation, bool drawingCircle)
 {
+    auto isSuccess = false;
     const auto currentMousePos = QPoint(mouse_Event_X_, mouse_Event_Y_);
 
-    if((currentMousePos - lastMousePos_).manhattanLength() < 3)
+    const auto pos = global()->getSnappedPosition(x, y);
+    const auto xScene = pos.x();
+    const auto yScene = pos.y();
+
+    if((currentMousePos - lastMousePos_).manhattanLength() < MIN_MOUSE_MOVE_TO_DRAW)
         return;
 
+    using CellSet = VectorAnimationComplex::CellSet;
     using Vertex = VectorAnimationComplex::KeyVertex;
     using Edge = VectorAnimationComplex::KeyEdge;
     using EggeSet = VectorAnimationComplex::KeyEdgeSet;
     using Cycle = VectorAnimationComplex::Cycle;
 
     QVector<QPointF> verticesPoints(countAngles);
-
-    const auto pos = global()->getSnappedPosition(x, y);
-    const auto xScene = pos.x();
-    const auto yScene = pos.y();
 
     auto w = global()->settings().edgeWidth();
     if(mouse_isTablet_ &&  global()->useTabletPressure())
@@ -1375,21 +1431,33 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
         }
     }
 
-    if (!lastDrawnCells_.isEmpty())
+    auto clearLastCells = [this]()
     {
-        vac_->deleteCells(lastDrawnCells_);
-        lastDrawnCells_.clear();
-    }
+        if (!lastDrawnCells_.isEmpty())
+        {
+            vac_->deleteCells(lastDrawnCells_);
+            lastDrawnCells_.clear();
+        }
+    };
 
-    auto processDrawShape = [this, &verticesPoints, &w, shapeType, &drawingCircle](bool isClosedShape = true)
+    auto processDrawShape = [this, &verticesPoints, &w, shapeType, &drawingCircle, &clearLastCells, &isSuccess](bool isClosedShape = true)
     {
         const auto verticesCount = verticesPoints.count();
+
+        // Check if a new shape is inside the surfaces area
+        if (!global()->isShapeInSurface(verticesPoints))
+            return;
+
+        clearLastCells();
+
+        const auto actualShapeType = drawingCircle ? ShapeType::CIRCLE : shapeType;
 
         //Draw Vertices
         QVector<Vertex*> vertices;
         for (auto point : verticesPoints)
         {
             auto vertex = vac_->newKeyVertex(interactiveTime(), Eigen::Vector2d(point.x(), point.y()));
+            vertex->setShapeType(actualShapeType);
             vertex->setColor(global()->edgeColor());
 
             vertices << vertex;
@@ -1401,25 +1469,29 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
         for (auto i = 0; i < verticesCount - 1; i++)
         {
             auto keyEdge = vac_->newKeyEdge(interactiveTime(), vertices[i], vertices[i + 1], 0, w);
+            keyEdge->setShapeType(actualShapeType);
             edges << keyEdge;
             lastDrawnCells_ << keyEdge;
         }
         if (isClosedShape)
         {
             auto keyEdge = vac_->newKeyEdge(interactiveTime(), vertices[verticesCount - 1], vertices[0], 0, w);
+            keyEdge->setShapeType(actualShapeType);
             edges << keyEdge;
             lastDrawnCells_ << keyEdge;
         }
 
         //Draw face
-        if (global()->isDrawShapeFaceEnabled())
+        if (global()->isDrawShapeFaceEnabled() && isClosedShape)
         {
             Cycle cycle(edges);
             auto faceCell = vac_->newKeyFace(cycle);
             faceCell->setColor(global()->faceColor());
-            drawingCircle ? faceCell->setShapeType(ShapeType::CIRCLE) : faceCell->setShapeType(shapeType);
+            faceCell->setShapeType(actualShapeType);
             lastDrawnCells_ << faceCell->toFaceCell();
         }
+
+        isSuccess = true;
     };
 
     switch (shapeType) {
@@ -1432,6 +1504,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
     }
     case ShapeType::CIRCLE:
     {
+        clearLastCells();
         const auto rx = shapeWidth / 2;
         const auto ry = shapeHeight / 2;
         const auto xCenter = leftX + rx;
@@ -1497,9 +1570,12 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
         break;
     }
 
-    // Update the selection geometry for display the correct selection size when drawing
-    global()->updateSelectedGeometry(leftX, topY, shapeWidth, shapeHeight, true);
     lastMousePos_ = currentMousePos;
+
+    if (isSuccess) {
+        // Update the selection geometry for display the correct selection size when drawing
+        global()->updateSelectedGeometry(leftX, topY, shapeWidth, shapeHeight, 0.0);
+    }
 }
 
 void View::updateView()
@@ -1509,25 +1585,54 @@ void View::updateView()
     emit allViewsNeedToUpdate();
 }
 
+// Move the selection on delta in millimeters
+void View::moveSelected(const double dx_mm, const double dy_mm)
+{
+    if (vac_->hasSelectedCells()) {
+        const auto delta = QPointF(global()->surfaceScaleFactor() * dx_mm, global()->surfaceScaleFactor() * dy_mm);
+
+        vac_->setHoveredCell(vac_->selectedCells().toList().at(0));
+        auto bb = vac_->selectedOutlineBoundingBox();
+        vac_->prepareDragAndDrop(bb.xMin(), bb.yMin(), interactiveTime());
+
+        // Check if a new position of the shape will be inside the surfaces area
+        if (global()->isShapeInSurface(vac_->draggedVertices(), vac_->draggedEdges(), delta)) {
+            vac_->performDragAndDrop(bb.xMin() + delta.x(), bb.yMin() + delta.y());
+            vac_->completeDragAndDrop();
+            vac_->setNoHoveredAllCells();
+            updateView();
+        }
+    }
+}
+
+void View::forcedMouseRelease()
+{
+    QMouseEvent event(QEvent::MouseButtonRelease, lastMousePos_, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    qApp->sendEvent(this, &event);
+}
+
 void View::drawScene()
 {
     if(!mouse_HideCursor_)
     {
-        setCursor(Qt::ArrowCursor);
         switch(global()->toolMode())
         {
         case Global::SELECT:
             setCursor(Qt::ArrowCursor);
             break;
         case Global::SKETCH:
-        case Global::DRAW_LINE:
-            setCursor(Qt::CrossCursor);
-            break;
         case Global::PAINT:
-            setCursor(Qt::CrossCursor);
-            break;
         case Global::SCULPT:
-            setCursor(Qt::CrossCursor);
+        case Global::DRAW_LINE:
+        case Global::DRAW_RECTANGLE:
+        case Global::DRAW_CIRCLE:
+        case Global::DRAW_TRIANGLE:
+        case Global::DRAW_RHOMBUS:
+        case Global::DRAW_PENTAGON:
+        case Global::DRAW_HEXAGON:
+        case Global::DRAW_HEPTAGON:
+        case Global::DRAW_OCTAGON:
+            setCursor(isMouseInSurface_ ? Qt::CrossCursor : Qt::ArrowCursor);
             break;
         default:
             setCursor(Qt::CrossCursor);

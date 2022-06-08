@@ -59,6 +59,9 @@
 #include <QDesktopServices>
 #include <QShortcut>
 
+namespace {
+const constexpr auto IS_AUTO_SAVE_ENABLED = false;
+}
 
 /*********************************************************************
  *                             Constructor
@@ -82,7 +85,7 @@ MainWindow::MainWindow(VPaint::Scene *_scene, QWidget* parent) :
     autosaveFilename_("0.vec"),
     autosaveTimer_(),
     autosaveIndex_(0),
-    autosaveOn_(true),
+    autosaveOn_(false),
     autosaveDir_(),
 
     clipboard_(0),
@@ -207,7 +210,9 @@ MainWindow::MainWindow(VPaint::Scene *_scene, QWidget* parent) :
     connect(multiView_, &MultiView::keyPressed, this, [this](QKeyEvent* event) { parseKeyPressEvent(event); });
 
     // Autosave
-    autosaveBegin();
+    if (IS_AUTO_SAVE_ENABLED) {
+        autosaveBegin();
+    }
 }
 
 void MainWindow::updateObjectProperties()
@@ -248,11 +253,16 @@ bool MainWindow::isShowCanvasChecked() const
 }
 void MainWindow::autosave()
 {
-    save_(autosaveDir_.absoluteFilePath(autosaveFilename_));
+    if (IS_AUTO_SAVE_ENABLED) {
+        save_(autosaveDir_.absoluteFilePath(autosaveFilename_));
+    }
 }
 
 void MainWindow::autosaveBegin()
 {
+    if (!IS_AUTO_SAVE_ENABLED)
+        return;
+
     bool success = true;
 
     QString dataPath = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
@@ -349,7 +359,7 @@ void MainWindow::autosaveBegin()
 
 void MainWindow::autosaveEnd()
 {
-    if(autosaveOn_)
+    if(IS_AUTO_SAVE_ENABLED && autosaveOn_)
     {
         autosaveDir_.remove(autosaveFilename_);
     }
@@ -363,7 +373,9 @@ void MainWindow::updateUndoRedoPossibility()
 MainWindow::~MainWindow()
 {
     clearUndoStack_();
-    autosaveEnd();
+    if (IS_AUTO_SAVE_ENABLED) {
+        autosaveEnd();
+    }
 }
 
 VPaint::Scene * MainWindow::scene() const
@@ -432,7 +444,7 @@ void MainWindow::undo()
     if(undoIndex_>0)
     {
         goToUndoIndex_(undoIndex_ - 1);
-        emit undoCompleted(scene_->activeLayer()->name());
+        emit undoCompleted();
     }
     else
     {
@@ -445,7 +457,7 @@ void MainWindow::redo()
     if(undoIndex_<undoStack_.size()-1)
     {
         goToUndoIndex_(undoIndex_ + 1);
-        emit redoCompleted(scene_->activeLayer()->name());
+        emit redoCompleted();
     }
     else
     {
@@ -456,7 +468,7 @@ void MainWindow::redo()
 void MainWindow::cut()
 {
     scene_->cut(clipboard_);
-    scene_->emitShapesUpdated(scene_->activeLayer()->name());
+    scene_->emitShapesUpdated();
 }
 
 void MainWindow::copy()
@@ -467,7 +479,7 @@ void MainWindow::copy()
 void MainWindow::paste(bool isMousePaste)
 {
     scene_->paste(clipboard_, isMousePaste);
-    scene_->emitShapesUpdated(scene_->activeLayer()->name());
+    scene_->emitShapesUpdated();
 }
 
 void MainWindow::motionPaste()
@@ -598,11 +610,11 @@ void MainWindow::parseKeyPressEvent(QKeyEvent* event)
     }
     else if (keySequence == QKeySequence(QKeySequence::Delete))
     {
-        scene()->deleteSelectedCells();
+        scene()->smartDelete();
     }
     else if (keySequence == QKeySequence(Qt::CTRL + Qt::Key_Delete))
     {
-        scene()->smartDelete();
+        scene()->deleteSelectedCells();
     }
 
     event->ignore();
@@ -1005,6 +1017,9 @@ void MainWindow::doImportSvg(const QString & filePath)
 
 bool MainWindow::save_(const QString & filePath, bool relativeRemap)
 {
+    if (!IS_AUTO_SAVE_ENABLED)
+        return false;
+
     // Open file to save to
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly | QFile::Truncate | QFile::Text))

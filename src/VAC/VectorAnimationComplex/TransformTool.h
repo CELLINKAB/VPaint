@@ -87,7 +87,7 @@ public:
     // Transform selection
     void beginTransform(double x0, double y0, Time time);
     // Added the angle parameter for the manual rotating
-    void continueTransform(double x, double y, double angle = 0.0);
+    bool continueTransform(double x, double y, double angle = 0.0);
     void endTransform();
 
     // Drag and drop transform tool
@@ -95,9 +95,9 @@ public:
     void performDragAndDrop(double dx, double dy);
     void endDragAndDrop();
 
-    void setManualWidth(double newWidth, Time time);
-    void setManualHeight(double newHeight, Time time);
-    void setManualRotation(double angle, Time time);
+    bool setManualWidth(double newWidth, Time time);
+    bool setManualHeight(double newHeight, Time time);
+    bool setManualRotation(double angle, Time time);
 
 private slots:
     void onKeyboardModifiersChanged();
@@ -141,6 +141,8 @@ private:
     Eigen::Vector2d transformPivotPosition_       (WidgetId id, const BoundingBox & bb) const;
     Eigen::Vector2d defaultTransformPivotPosition_(WidgetId id, const BoundingBox & bb) const;
     Eigen::Vector2d altTransformPivotPosition_    (WidgetId id, const BoundingBox & bb) const;
+    BoundingBox cellsGeometry(Time time) const;
+    BoundingBox cellsGeometry() const;
 
     bool manualPivot_;
     bool draggingManualPivot_;
@@ -161,6 +163,8 @@ private:
     double x0_, y0_, dx_, dy_, x_, y_;
     BoundingBox bb0_, obb0_;
     double dTheta_;
+    double dTheta0_;
+    Time startTransformTime_;
 };
 
 }

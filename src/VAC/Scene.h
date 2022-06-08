@@ -26,6 +26,7 @@
 #include "VAC/vpaint_global.h"
 #include "VAC/VectorAnimationComplex/Cell.h"
 #include "VAC/VectorAnimationComplex/InfillPattern.h"
+#include "Global.h"
 
 class Background;
 class View;
@@ -90,9 +91,9 @@ public:
     // Emit signals
     void emitChanged() {emit changed();}
     void emitCheckpoint() {emit checkpoint();}
-    void emitShapeDrawn(ShapeType type) { emit shapeDrawn(type);}
-    void emitShapeDelete(ShapeType type) { emit shapeDeleted(type);}
-    void emitShapesUpdated(const QString& layerName) { emit shapesUpdated(layerName);}
+    void emitShapeDrawn() { emit shapeDrawn();}
+    void emitShapeDelete() { emit shapeDeleted();}
+    void emitShapesUpdated() { emit shapesUpdated();}
     // Save and load
     void exportSVG(Time t, QTextStream & out);
     void save(QTextStream & out);
@@ -108,7 +109,7 @@ public:
     Layer* layer(int i) const;
 
     // Active layer
-    void setActiveLayer(int i);
+    void setActiveLayer(int i, bool needEmitCheckpoint = false);
     Layer * activeLayer() const;
     int activeLayerIndex() const; // returns -1 if no active layers.
     VectorAnimationComplex::VAC * activeVAC() const;
@@ -118,12 +119,13 @@ public:
     // Set as active layer
     Layer * createLayer();
     Layer * createLayer(const QString & name);
-    void addLayer(Layer * layer );
+    void addLayer(Layer* layer, bool setActiveOnTop = true);
     void moveActiveLayerUp();
     void moveActiveLayerDown();
 
     // destroy the given layer
     void destroyActiveLayer();
+    void destroyLayer(const int index);
     
     // GUI
     void populateToolBar(QToolBar * toolBar);
@@ -154,6 +156,10 @@ public:
 
     inline qreal firstLayerHeightPercents() const { return firstLayerHeightPercents_; }
     void setFirstLayerHeightPercents(const qreal percents);
+
+    SurfaceType getLoadedSurfaceType();
+
+    bool hasSceneContent() const;
 
 public slots:
     // --------- Tools ----------
@@ -232,9 +238,9 @@ signals:
 
     void selectionChanged();
     void layerAttributesChanged();
-    void shapeDrawn(ShapeType type);
-    void shapeDeleted(ShapeType type);
-    void shapesUpdated(const QString& layerName);
+    void shapeDrawn();
+    void shapeDeleted();
+    void shapesUpdated();
 private:
     // Layers are ordered back to front,
     // Example: layers_[0] is the bottom-most layer, rendered first
@@ -251,6 +257,8 @@ private:
     bool isUseConsistentLayerHeight_;
     qreal consistentLayerHeight_;
     qreal firstLayerHeightPercents_;
+
+    SurfaceType loadedSurfaceType_;
 };
 }
     

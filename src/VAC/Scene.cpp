@@ -45,7 +45,8 @@ Scene::Scene() :
     height_(720),
     isUseConsistentLayerHeight_(true),
     consistentLayerHeight_(-1.0),
-    firstLayerHeightPercents_(-1.0)
+    firstLayerHeightPercents_(-1.0),
+    loadedSurfaceType_(SurfaceType::None)
 {
     indexHovered_ = -1;
 }
@@ -317,6 +318,21 @@ void Scene::readCanvas(XmlStreamReader & xml)
         firstLayerHeightPercents_ = xml.attributes().value("firstLayerHeightPercents").toDouble();
     }
 
+    if (xml.attributes().hasAttribute("surfaceType"))
+    {
+        loadedSurfaceType_ = static_cast<SurfaceType>(xml.attributes().value("surfaceType").toInt());
+    }
+
+    if (xml.attributes().hasAttribute("sceneWidth"))
+    {
+        setWidth(xml.attributes().value("sceneWidth").toInt());
+    }
+
+    if (xml.attributes().hasAttribute("sceneHeight"))
+    {
+        setHeight(xml.attributes().value("sceneHeight").toInt());
+    }
+
 
     xml.skipCurrentElement();
 }
@@ -328,6 +344,11 @@ void Scene::writeCanvas(XmlStreamWriter & xml)
     xml.writeAttribute("useConsistentLayerHeight", QString().setNum(isUseConsistentLayerHeight()));
     xml.writeAttribute("consistentLayerHeight", QString().setNum(consistentLayerHeight()));
     xml.writeAttribute("firstLayerHeightPercents", QString().setNum(firstLayerHeightPercents()));
+    xml.writeAttribute("surfaceType", QString().setNum(static_cast<int>(global()->surfaceType())));
+    xml.writeAttribute("sceneWidth", QString().setNum(width()));
+    xml.writeAttribute("sceneHeight", QString().setNum(height()));
+
+
 }
 
 void Scene::relativeRemap(const QDir & oldDir, const QDir & newDir)
@@ -441,6 +462,7 @@ void Scene::setHoveredObject(Time time, int index, int id)
 
 void Scene::setNoHoveredObject()
 {
+    indexHovered_ = indexHovered_ >= 0 && indexHovered_ < numLayers() ? indexHovered_ : -1;
     if(indexHovered_ != -1)
     {
         layers_[indexHovered_]->setNoHoveredObject();
@@ -450,17 +472,23 @@ void Scene::setNoHoveredObject()
 
 void Scene::select(Time time, int index, int id)
 {
-    layers_[index]->select(time, id);
+    if (index >= 0 && index < numLayers()) {
+        layers_[index]->select(time, id);
+    }
 }
 
 void Scene::deselect(Time time, int index, int id)
 {
-    layers_[index]->deselect(time, id);
+    if (index >= 0 && index < numLayers()) {
+        layers_[index]->deselect(time, id);
+    }
 }
 
 void Scene::toggle(Time time, int index, int id)
 {
-    layers_[index]->toggle(time, id);
+    if (index >= 0 && index < numLayers()) {
+        layers_[index]->toggle(time, id);
+    }
 }
 
 void Scene::deselectAll(Time time)
@@ -782,6 +810,24 @@ void Scene::setFirstLayerHeightPercents(const qreal percents)
     }
 }
 
+SurfaceType Scene::getLoadedSurfaceType()
+{
+    auto surfaceType = loadedSurfaceType_;
+    loadedSurfaceType_ = SurfaceType::None;
+    return surfaceType;
+}
+
+bool Scene::hasSceneContent() const
+{
+    for (auto layer : layers_)
+    {
+        if (layer && layer->vac()->instantVertices().count() > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Scene::deleteSelectedCells()
 {
     Layer * layer = activeLayer();
@@ -792,7 +838,7 @@ void Scene::deleteSelectedCells()
         for(auto shapeType : shapesType)
         if(shapeType != ShapeType::NONE)
         {
-            emitShapeDelete(shapeType);
+            emitShapeDelete();
         }
     }
 }
@@ -817,7 +863,7 @@ void Scene::smartDelete()
         for(auto shapeType : shapesType)
         if(shapeType != ShapeType::NONE)
         {
-            emitShapeDelete(shapeType);
+            emitShapeDelete();
         }
     }
 }
@@ -839,7 +885,7 @@ Layer* Scene::layer(int i) const
     }
 }
 
-void Scene::setActiveLayer(int i)
+void Scene::setActiveLayer(int i, bool needEmitCheckpoint)
 {
     if(i != activeLayerIndex_ && 0 <= i && i < numLayers())
     {
@@ -850,6 +896,9 @@ void Scene::setActiveLayer(int i)
         emitChanged();
         emit needUpdatePicking();
         emit layerAttributesChanged();
+        if (needEmitCheckpoint) {
+            emitCheckpoint();
+        }
     }
 }
 
@@ -879,13 +928,15 @@ Layer * Scene::createLayer()
 {
     return createLayer(tr("Layer %1").arg(numLayers() + 1));
 }
-void Scene::addLayer(Layer * layer )
+
+void Scene::addLayer(Layer * layer , bool setActiveOnTop)
 {
+    deselectAll();
     addLayer_(layer, true);
 
     // Move above active layer, or keep last if no active layer
     int newActiveLayerIndex = layers_.size() - 1;
-    if (0 <= activeLayerIndex_ && activeLayerIndex_ < newActiveLayerIndex - 1)
+    if (!setActiveOnTop && 0 <= activeLayerIndex_ && activeLayerIndex_ < newActiveLayerIndex - 1)
     {
         newActiveLayerIndex = activeLayerIndex_ + 1;
         for (int i = layers_.size() - 1; i > newActiveLayerIndex; --i)
@@ -902,6 +953,9 @@ void Scene::addLayer(Layer * layer )
     emitChanged();
     emit needUpdatePicking();
     emit layerAttributesChanged();
+    if (layers_.size() > 1) {
+        emitCheckpoint();
+    }
 }
 
 Layer * Scene::createLayer(const QString & name)
@@ -960,13 +1014,17 @@ void Scene::moveActiveLayerDown()
 
 void Scene::destroyActiveLayer()
 {
-    int i = activeLayerIndex_;
-    if(0 <= i && i < numLayers())
+    destroyLayer(activeLayerIndex_);
+}
+
+void Scene::destroyLayer(const int index)
+{
+    if (0 <= index && index < numLayers())
     {
         deselectAll();
 
-        Layer * toBeDestroyedLayer = layers_[i];
-        layers_.removeAt(i);
+        Layer* toBeDestroyedLayer = layers_[index];
+        layers_.removeAt(index);
 
         // Set as active the layer below, unless it was the bottom-most layer
         // or the only layer in the scene.
@@ -981,7 +1039,7 @@ void Scene::destroyActiveLayer()
             activeLayerIndex_ = 0;
             activeLayer()->background()->setOpacity(1.0);
         }
-        else
+        else if (index <= activeLayerIndex_)
         {
             // had layer below
             --activeLayerIndex_;
@@ -992,6 +1050,7 @@ void Scene::destroyActiveLayer()
         emitChanged();
         emit needUpdatePicking();
         emit layerAttributesChanged();
+        emitCheckpoint();
     }
 }
 

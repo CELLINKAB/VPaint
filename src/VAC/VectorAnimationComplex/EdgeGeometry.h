@@ -117,6 +117,8 @@ public:
     bool isClosed() const {return isClosed_;}
     void makeLoop() { isClosed_ = true; makeLoop_(); }
 
+    inline const QList<Eigen::Vector2d>& samplingBeforeTransform() const { return samplingBeforeTransform_; }
+
     // Closest vertex queries
     struct ClosestVertexInfo {
         EdgeSample p; // closest point
@@ -140,6 +142,7 @@ protected:
     virtual void makeLoop_() {}
     bool isClosed_;
 
+    QList<Eigen::Vector2d> samplingBeforeTransform_{};
 
 private:
     double ds_;

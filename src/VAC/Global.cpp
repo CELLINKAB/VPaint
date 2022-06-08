@@ -24,6 +24,9 @@
 #include "DevSettings.h"
 #include "ColorSelector.h"
 #include "Timeline.h"
+#include "VectorAnimationComplex/KeyVertex.h"
+#include "VAC/VectorAnimationComplex/EdgeGeometry.h"
+#include "VAC/VectorAnimationComplex/EdgeSample.h"
 
 #include <QDebug>
 #include <QApplication>
@@ -83,8 +86,12 @@ Global::Global(MainWindow * w) :
     gridSize_(1.0),
     pasteDeltaX_(15),
     pasteDeltaY_(15),
-    selectedGeometry_{0, 0, 0, 0},
-    mousePastePosition_{0, 0},
+    selectedRotation_(0.0),
+    skippingCurveSamples_(2),
+    selectedGeometry_{0.0, 0.0, 0.0, 0.0},
+    mousePastePosition_{0.0, 0.0},
+    sceneCenterPosition_{0.0, 0.0},
+    arrowKeysMoveDelta_{1.0, 1.0},
     surfaceType_(VPaint::SurfaceType::None),
     surfaceBackGroundColor_{QColor(Qt::white)},
     surfaceBorderColor_{QColor(Qt::darkGray)},
@@ -1002,19 +1009,26 @@ void Global::setPasteDelta(double delta)
     pasteDeltaY_ = delta;
 }
 
-// Update the selection geometry for display the correct selection size in the Shape parameter bar
-// And emitting signal if selection geometry was changed interactive(when drawing and transforming)
-void Global::updateSelectedGeometry(double x, double y, double w, double h, bool isInteractive)
+// Update the selection geometry for display the correct selection size/rotation in the Shape parameter bar
+void Global::updateSelectedGeometry(double x, double y, double w, double h, double rotation)
+{
+    selectedRotation_ = rotation;
+    updateSelectedGeometry(x, y, w, h);
+}
+
+void Global::updateSelectedGeometry(double x, double y, double w, double h)
 {
     selectedGeometry_.setX(x);
     selectedGeometry_.setY(y);
     selectedGeometry_.setWidth(w);
     selectedGeometry_.setHeight(h);
 
-    if (isInteractive)
-    {
-        emit interactiveGeometryChanged();
-    }
+    updateSelectedGeometry();
+}
+
+void Global::updateSelectedGeometry()
+{
+    emit interactiveGeometryChanged();
 }
 
 // Storing the mouse position on scene for be able to paste in right position
@@ -1049,6 +1063,8 @@ void Global::setSurfaceScaleFactor(double scaleFactor)
 {
     surfaceScaleFactor_ = scaleFactor;
     gridSize_ = gridSizeMM_ * scaleFactor;
+    sceneCenterPosition_.setX(scene()->left() + scene()->width() / 2);
+    sceneCenterPosition_.setY(scene()->top() + scene()->height() / 2);
 }
 
 void Global::setGridSize(double gridSizeMM)
@@ -1121,6 +1137,98 @@ QPointF Global::getSnappedPosition(const QPointF& pos)
     auto yRes = pos.y();
     calculateSnappedPosition(xRes, yRes);
     return QPointF(xRes, yRes);
+}
+
+bool Global::isPointInSurface(const double x, const double y) const
+{
+    auto result = false;
+    switch (surfaceType_) {
+    case VPaint::SurfaceType::WellPlate:
+    case VPaint::SurfaceType::PetriDish:
+    {
+        const auto radius = scene()->width() / 2;
+        const auto deltaX = x - sceneCenterPosition_.x();
+        const auto deltaY = y - sceneCenterPosition_.y();
+        const auto distanceToCenter2 = deltaX * deltaX + deltaY * deltaY;
+        result = distanceToCenter2 <= radius * radius;
+        break;
+    }
+    case VPaint::SurfaceType::GlassSlide:
+    {
+        const auto xMin = scene()->left();
+        const auto yMin = scene()->top();
+        const auto xMax = xMin + scene()->width();
+        const auto yMax = yMin + scene()->height();
+        result = x >= xMin && y >= yMin && x <= xMax && y <= yMax;
+        break;
+    }
+    default:
+        break;
+    }
+
+    return result;
+}
+
+bool Global::isShapeInSurface(const VectorAnimationComplex::KeyVertexSet& vertices, const VectorAnimationComplex::KeyEdgeSet& edges, const QPointF delta) const
+{
+    // Check all vertices
+    for (auto vertex : vertices)
+    {
+        const auto vx = vertex->pos()[0];
+        const auto vy = vertex->pos()[1];
+        if (!isPointInSurface(vx + delta.x(), vy + delta.y()))
+            return false;
+    }
+
+    // Check samples of all edges(curves only)
+    for (auto edge : edges)
+    {
+        if (edge->shapeType() == ShapeType::CURVE) {
+            const auto samples = edge->geometry()->sampling();
+            const auto inc = skippingCurveSamples() + 1;
+            for (auto i = 0; i < samples.count(); i += inc)
+            {
+                const auto sample = samples[i];
+                if (!isPointInSurface(sample[0] + delta.x(), sample[1] + delta.y()))
+                    return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool Global::isShapeInSurface(const QVector<QPointF>& vertices) const
+{
+    for (auto position : vertices)
+    {
+        if (!isPointInSurface(position.x(), position.y()))
+            return false;
+    }
+    return true;
+}
+
+void Global::setArrowKeysMoveDelta(const double delta)
+{
+    arrowKeysMoveDelta_.setX(delta);
+    arrowKeysMoveDelta_.setY(delta);
+}
+
+void Global::setArrowKeysMoveDelta(const double deltaX, const double deltaY)
+{
+    arrowKeysMoveDelta_.setX(deltaX);
+    arrowKeysMoveDelta_.setY(deltaY);
+}
+
+void Global::setArrowKeysMoveDelta(const QPointF& delta)
+{
+    arrowKeysMoveDelta_.setX(delta.x());
+    arrowKeysMoveDelta_.setY(delta.y());
+}
+
+void Global::setSkippingCurveSamples(const int value)
+{
+    skippingCurveSamples_ = value;
 }
 
 bool Global::useTabletPressure() const

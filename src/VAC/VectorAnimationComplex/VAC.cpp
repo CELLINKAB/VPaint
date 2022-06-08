@@ -277,10 +277,9 @@ void VAC::initNonCopyable()
     signalCounter_ = 0;
     pasteDeltaX_ = 0;
     pasteDeltaY_ = 0;
-    isManualTransform_ = false;
-    checkPointTimer = new QTimer(this);
-    checkPointTimer->setSingleShot(true);
-    connect(checkPointTimer, &QTimer::timeout, this, [this]() {
+    checkPointTimer_ = new QTimer(this);
+    checkPointTimer_->setSingleShot(true);
+    connect(checkPointTimer_, &QTimer::timeout, this, [this]() {
         emit changed();
         emit checkpoint();
     });
@@ -300,9 +299,8 @@ VAC::VAC() :
     SceneObject(),
     pasteDeltaX_(0),
     pasteDeltaY_(0),
-    isManualTransform_(false),
     lastShapeID_(0),
-    checkPointTimer(nullptr)
+    checkPointTimer_(nullptr)
 {
     initNonCopyable();
     initCopyable();
@@ -310,10 +308,11 @@ VAC::VAC() :
 
 VAC::~VAC()
 {
-    if (checkPointTimer != nullptr)
+    if (checkPointTimer_ != nullptr)
     {
-        delete checkPointTimer;
-        checkPointTimer = nullptr;
+        checkPointTimer_->stop();
+        delete checkPointTimer_;
+        checkPointTimer_ = nullptr;
     }
     deleteAllCells();
 }
@@ -902,13 +901,6 @@ void VAC::deselectAll(Time time)
         }
     }
     removeFromSelection(cellsToDeselect,false);
-
-    // Storing the last transforming for undo/redo when
-    // performed the manual transform(from the shape parameters bar)
-    if (isManualTransform_) {
-        emit checkpoint();
-    }
-    isManualTransform_ = false;
 }
 
 void VAC::deselectAll()
@@ -916,13 +908,6 @@ void VAC::deselectAll()
     if(numSelectedCells() != 0) {
         setSelectedCells(CellSet(),false);
     }
-
-    // Storing the last transforming for undo/redo when
-    // performed the manual transform(from the shape parameters bar)
-    if (isManualTransform_) {
-        emit checkpoint();
-    }
-    isManualTransform_ = false;
 }
 
 void VAC::invertSelection()
@@ -1081,7 +1066,6 @@ VAC::VAC(QTextStream & in) :
     SceneObject(),
     pasteDeltaX_(0),
     pasteDeltaY_(0),
-    isManualTransform_(false),
     lastShapeID_(0)
 
 {
@@ -1371,36 +1355,71 @@ void VAC::smartDelete_(const CellSet & cellsToDelete)
 
 QList<ShapeType> VAC::getAllShapesType()
 {
-    QList<ShapeType> types;
-    KeyFaceSet keyFaces = faces();
-    for (auto face : keyFaces)
+    QMap<int, ShapeType> types;
+    const auto keyVertices = instantVertices();
+    for (const auto keyVertex : keyVertices)
     {
-        if (!face->isIgnored())
+        if (!keyVertex->isIgnored())
         {
-            types.append(face->shapeType());
+            types.insert(keyVertex->shapeID(), keyVertex->shapeType());
         }
     }
-    return types;
+    return types.values();
+}
+
+QList<QColor> VAC::selectedShapesColor()
+{
+    QList<QColor> colors;
+
+    for(auto cell : selectedCells())
+    {
+        QColor color;
+        if (cell->isIgnored())
+        {
+            color.setRgbF(cell->color_[0],cell->color_[1],cell->color_[2],cell->color_[3]);
+        }
+        else if (auto keyEdge = cell->toKeyEdge())
+        {
+            color = keyEdge->color();
+        }
+        else if (auto keyVertex = cell->toKeyVertex())
+        {
+            if (!global()->isShowVerticesOnSelection())
+            {
+                color = keyVertex->color();
+            }
+        }else
+        {
+            continue;
+        }
+        colors.append(color);
+    }
+    return colors;
 }
 
 QList<ShapeType> VAC::getSelectedShapeType()
 {
-    QList<ShapeType> types;
-    KeyFaceSet keyVertices = selectedCells_;
-    for( auto vertex : keyVertices)
+    QMap<int, ShapeType> types;
+    const KeyVertexSet keyVertices = selectedCells_;
+    for (const auto keyVertex : keyVertices)
     {
-        types.append(vertex->shapeType());
+        if (!keyVertex->isIgnored())
+        {
+            types.insert(keyVertex->shapeID(), keyVertex->shapeType());
+        }
     }
-    return types;
+    return types.values();
 }
 
 ShapeType VAC::shapeType(const CellSet & cells)
 {
-    KeyFaceSet keyVertices = cells;
-    for( auto vertex : keyVertices)
+    const KeyVertexSet keyVertices = cells;
+    for(const auto keyVertex : keyVertices)
     {
-        ShapeType type =  vertex->shapeType();
-        return type;
+        if (!keyVertex->isIgnored()) {
+            ShapeType type = keyVertex->shapeType();
+            return type;
+        }
     }
     return ShapeType::NONE;
 }
@@ -1511,6 +1530,7 @@ void VAC::deleteCell(Cell * cell)
 
     // Finally, now that no pointers point to the cell, release memory
     delete cell;
+    cell = nullptr;
 }
 
 // Smart deletion and simplification
@@ -1994,7 +2014,7 @@ void VAC::changeEdgesColor()
 
     if (emitCheckpoint)
     {
-        checkPointTimer->start(5);
+        checkPointTimer_->start(5);
     }
 }
 
@@ -2014,8 +2034,8 @@ void VAC::changeFacesColor()
 
     if (emitCheckpoint)
     {
-        checkPointTimer->stop();
-        checkPointTimer->start(5);
+        checkPointTimer_->stop();
+        checkPointTimer_->start(5);
     }
 }
 
@@ -2036,7 +2056,7 @@ void VAC::changeInfillColor()
 
     if (emitCheckpoint)
     {
-        checkPointTimer->stop();
+        checkPointTimer_->stop();
         emit changed();
         emit checkpoint();
     }
@@ -2085,33 +2105,76 @@ void VAC::calculateSelectedGeometry()
 {
     if (!selectedCells().empty()) {
         BoundingBox obb;
+        double rotation = 0.0;
+        auto isRotationValid = false;
+        auto isDiffRotationInSelection = false;
+        for (auto cell : selectedCells())
+        {
+            obb.unite(cell->outlineBoundingBox(timeInteractivity_));
+
+            const auto keyVertex = cell->toKeyVertex();
+            if (!isDiffRotationInSelection && keyVertex)
+            {
+                if (isRotationValid) {
+                    isDiffRotationInSelection = keyVertex->rotation() != rotation;
+                } else {
+                    rotation = keyVertex->rotation();
+                    isRotationValid = true;
+                }
+            }
+        }
+        rotation = isDiffRotationInSelection ? 0.0 : rotation;
+        global()->updateSelectedGeometry(obb.xMin(), obb.yMin(), obb.width(), obb.height(), rotation);
+    }
+}
+
+BoundingBox VAC::selectedBoundingBox() const
+{
+    BoundingBox bb;
+    if (!selectedCells().empty()) {
+        for (auto cell : selectedCells())
+        {
+            bb.unite(cell->boundingBox(timeInteractivity_));
+        }
+    }
+    return bb;
+}
+
+BoundingBox VAC::selectedOutlineBoundingBox() const
+{
+    BoundingBox obb;
+    if (!selectedCells().empty()) {
         for (auto cell : selectedCells())
         {
             obb.unite(cell->outlineBoundingBox(timeInteractivity_));
         }
-        global()->updateSelectedGeometry(obb.xMin(), obb.yMin(), obb.width(), obb.height());
     }
+    return obb;
 }
 
 void VAC::setManualWidth(double newWidth)
 {
-    isManualTransform_ = true;
-    transformTool_.setManualWidth(newWidth, timeInteractivity_);
-    emit changed();
+    if (transformTool_.setManualWidth(newWidth, timeInteractivity_)) {
+        emit changed();
+        emit checkpoint();
+    }
 }
 
 void VAC::setManualHeight(double newHeight)
 {
-    isManualTransform_ = true;
-    transformTool_.setManualHeight(newHeight, timeInteractivity_);
-    emit changed();
+    if (transformTool_.setManualHeight(newHeight, timeInteractivity_)) {
+        emit changed();
+        emit checkpoint();
+    }
 }
 
 void VAC::setManualRotation(double angle)
 {
-    isManualTransform_ = true;
-    transformTool_.setManualRotation(angle, timeInteractivity_);
-    emit changed();
+    if (transformTool_.setManualRotation(angle, timeInteractivity_)) {
+        emit changed();
+        emit needUpdatePicking();
+        emit checkpoint();
+    }
 }
 
 void VAC::assignShapeID(Cell* cell)
@@ -2122,6 +2185,11 @@ void VAC::assignShapeID(Cell* cell)
 void VAC::endDrawShape()
 {
     lastShapeID_ ++;
+}
+
+QPointF VAC::dragStartPosition() const
+{
+    return QPointF(x0_, y0_);
 }
 
 bool VAC::cutFace_(KeyFace * face, KeyEdge * edge, CutFaceFeedback * feedback)

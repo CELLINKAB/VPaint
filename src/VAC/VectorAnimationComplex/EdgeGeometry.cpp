@@ -1222,6 +1222,8 @@ void LinearSpline::performDragAndDrop(double dx, double dy)
 void LinearSpline::prepareAffineTransform()
 {
     curveBeforeTransform_ = curve_;
+    samplingBeforeTransform_.clear();
+    samplingBeforeTransform_.append(sampling_);
 }
 
 void LinearSpline::performAffineTransform(const Eigen::Affine2d & xf)

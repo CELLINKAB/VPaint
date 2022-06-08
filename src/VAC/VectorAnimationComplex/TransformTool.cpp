@@ -405,7 +405,10 @@ TransformTool::TransformTool(QObject * parent) :
     draggingManualPivot_(false),
     dragAndDropping_(false),
     transforming_(false),
-    rotating_(false)
+    rotating_(false),
+    dTheta_(0.0),
+    dTheta0_(0.0),
+    startTransformTime_{}
 {
     if (global()) {
       connect(global(), SIGNAL(keyboardModifiersChanged()), this, SLOT(onKeyboardModifiersChanged()));
@@ -522,6 +525,21 @@ Eigen::Vector2d TransformTool::altTransformPivotPosition_(WidgetId id, const Bou
     // This should never happen
     qDebug("Warning: WidgetId not handled in switch in altTransformPivotPosition_");
     return noTransformPivotPosition_(bb);
+}
+
+BoundingBox TransformTool::cellsGeometry(Time time) const
+{
+    BoundingBox obb;
+    for (const auto cell : qAsConst(cells_))
+    {
+        obb.unite(cell->outlineBoundingBox(time));
+    }
+    return obb;
+}
+
+BoundingBox TransformTool::cellsGeometry() const
+{
+    return cellsGeometry(startTransformTime_);
 }
 
 Eigen::Vector2d TransformTool::pivotPosition(Time time) const
@@ -739,12 +757,6 @@ void TransformTool::draw(const CellSet & cells, Time time, ViewSettings & viewSe
     {
         glPopMatrix();
     }
-
-    // Update the selection geometry for display the correct selection size when transforming
-    if (cells_.count())
-    {
-        global()->updateSelectedGeometry(obb.xMin(), obb.yMin(), obb.width(), obb.height(), true);
-    }
 }
 
 void TransformTool::drawPick(const CellSet & cells, Time time, ViewSettings & viewSettings) const
@@ -817,6 +829,7 @@ namespace
 
 void TransformTool::beginTransform(double x0, double y0, Time time)
 {
+    startTransformTime_ = time;
     // Clear cached values
     draggedVertices_.clear();
     draggedEdges_.clear();
@@ -931,6 +944,9 @@ void TransformTool::beginTransform(double x0, double y0, Time time)
         yTransformPivot_    = defaultTransformPivotPos[1];
         xTransformPivotAlt_ = altTransformPivotPos[0];
         yTransformPivotAlt_ = altTransformPivotPos[1];
+
+        dTheta0_ = global()->selectedRotation();
+        dTheta_ = 0.0;
     }
 }
 
@@ -951,16 +967,17 @@ double scaleFactor_(double x, double x0, double xPivot, double dx)
 
 }
 
-void TransformTool::continueTransform(double x, double y, double angle)
+bool TransformTool::continueTransform(double x, double y, double angleDelta)
 {
     // Cache mouse position
     x_ = x;
     y_ = y;
 
+    auto rotation = dTheta0_;
 
     // Return in trivial cases
     if (hovered() == None || cells_.isEmpty())
-        return;
+        return false;
 
     // Move pivot
     if (hovered() == Pivot)
@@ -1030,8 +1047,8 @@ void TransformTool::continueTransform(double x, double y, double angle)
 
             const double theta0 = std::atan2(y0_ - yPivot, x0_ - xPivot);
             const double theta  = std::atan2(y   - yPivot, x   - xPivot);
-            double dTheta = angle != 0 ? angle : theta - theta0; // in [-2*PI, 2*PI]
-            if (angle == 0 && isTransformConstrained_())
+            double dTheta = angleDelta != 0 ? angleDelta : theta - theta0; // in [-2*PI, 2*PI]
+            if (angleDelta == 0 && isTransformConstrained_())
             {
                 for (int i=-8; i<10; ++i)
                 {
@@ -1055,22 +1072,57 @@ void TransformTool::continueTransform(double x, double y, double angle)
             }
             xf = Eigen::Rotation2Dd(dTheta);
             dTheta_ = dTheta;
+            rotation += dTheta;
+            rotation = rotation > M_PI ?
+                       rotation - M_PI * 2 :
+                       rotation < -M_PI ?
+                       rotation + M_PI * 2 : rotation;
         }
         else
         {
-            return;
+            return false;
         }
 
         // Make pivot point invariant by transformation
         Eigen::Translation2d pivot(xPivot, yPivot);
         xf = pivot * xf * pivot.inverse();
 
+
+        // Check if vertices of selected shapes will be inside the surface
+        for (const KeyVertex* vertex : qAsConst(draggedVertices_))
+        {
+            const auto newPosition =  xf * vertex->posBack();
+            if (!global()->isPointInSurface(newPosition[0], newPosition[1])) {
+                return false;
+            }
+        }
+
+        // Check if samples of edges of selected curves will be inside the surface
+        for (const KeyEdge* edge : qAsConst(draggedEdges_))
+        {
+            if (edge->shapeType() == ShapeType::CURVE) {
+                const auto samples = edge->geometry()->samplingBeforeTransform();
+                const auto inc = global()->skippingCurveSamples() + 1;
+                for (auto i = 0; i < samples.count(); i += inc)
+                {
+                    const auto newSample = xf * samples[i];
+                    if (!global()->isPointInSurface(newSample[0], newSample[1]))
+                        return false;
+                }
+            }
+        }
+
         // Apply affine transformation
         for(KeyEdge * e: qAsConst(draggedEdges_))
             e->performAffineTransform(xf);
 
         for(KeyVertex * v: qAsConst(draggedVertices_))
+        {
             v->performAffineTransform(xf);
+            if (rotating_) {
+                v->setRotation(rotation);
+            }
+        }
 
         for(KeyVertex * v: qAsConst(draggedVertices_))
             v->correctEdgesGeometry();
@@ -1085,7 +1137,16 @@ void TransformTool::continueTransform(double x, double y, double angle)
             xManualPivot_ = manualPivot[0];
             yManualPivot_ = manualPivot[1];
         }
+
+        // Update the selection geometry for display the correct selection size when transforming
+        const auto& obb = cellsGeometry();
+        if (rotating_) {
+            global()->updateSelectedGeometry(obb.xMin(), obb.yMin(), obb.width(), obb.height(), rotation);
+        } else {
+            global()->updateSelectedGeometry(obb.xMin(), obb.yMin(), obb.width(), obb.height());
+        }
     }
+    return true;
 }
 
 void TransformTool::endTransform()
@@ -1117,75 +1178,76 @@ void TransformTool::endDragAndDrop()
     dragAndDropping_ = false;
 }
 
-void TransformTool::setManualWidth(double newWidth, Time time)
+bool TransformTool::setManualWidth(double newWidth, Time time)
 {
-    BoundingBox obb;
-    for (auto cell : cells_)
-    {
-        obb.unite(cell->outlineBoundingBox(time));
-    }
-
+    auto result = false;
+    const auto& obb = cellsGeometry(time);
     if (obb.isProper())
     {
-        auto delta = (newWidth - obb.width()) / 2;
+        const auto delta = (newWidth - obb.width()) / 2;
 
-        if (!qFuzzyIsNull(delta))
+        result = !qFuzzyIsNull(delta);
+        if (result)
         {
             hovered_ = LeftScale;
             beginTransform(obb.xMin(), obb.yMid(), time);
-            continueTransform(obb.xMin() - delta, obb.yMid());
+            const auto leftResult = continueTransform(obb.xMin() - delta, obb.yMid());
             endTransform();
 
             hovered_ = RightScale;
             beginTransform(obb.xMax(), obb.yMid(), time);
-            continueTransform(obb.xMax() + delta, obb.yMid());
+            const auto rightResult = continueTransform(obb.xMax() + delta, obb.yMid());
             endTransform();
             hovered_ = None;
+            result = leftResult || rightResult;
         }
     }
+    return result;
 }
 
-void TransformTool::setManualHeight(double newHeight, Time time)
+bool TransformTool::setManualHeight(double newHeight, Time time)
 {
-    BoundingBox obb;
-    for (auto cell : cells_)
-    {
-        obb.unite(cell->outlineBoundingBox(time));
-    }
-
+    auto result = false;
+    const auto& obb = cellsGeometry(time);
     if (obb.isProper())
     {
-        auto delta = (newHeight - obb.height()) / 2;
+        const auto delta = (newHeight - obb.height()) / 2;
 
-        if (!qFuzzyIsNull(delta))
+        result = !qFuzzyIsNull(delta);
+        if (result)
         {
             hovered_ = TopScale;
             beginTransform(obb.xMid(), obb.yMin(), time);
-            continueTransform(obb.xMid(), obb.yMin() - delta);
+            const auto topResult = continueTransform(obb.xMid(), obb.yMin() - delta);
             endTransform();
 
             hovered_ = BottomScale;
             beginTransform(obb.xMid(), obb.yMax(), time);
-            continueTransform(obb.xMid(), obb.yMax() + delta);
+            const auto bottomResult = continueTransform(obb.xMid(), obb.yMax() + delta);
             endTransform();
             hovered_ = None;
+            result = topResult || bottomResult;
         }
     }
+    return result;
 }
 
-void TransformTool::setManualRotation(double angle, Time time)
+bool TransformTool::setManualRotation(double angle, Time time)
 {
-    BoundingBox obb;
-    for (auto cell : cells_)
-    {
-        obb.unite(cell->outlineBoundingBox(time));
+    auto result = false;
+    const auto angleDelta = angle - global()->selectedRotation();
+    if (!qFuzzyIsNull(angleDelta)) {
+        const auto& obb = cellsGeometry(time);
+        hovered_ = TopLeftRotate;
+        beginTransform(obb.xMin(), obb.yMin(), time);
+        result = continueTransform(obb.xMin(), obb.yMin(), angleDelta);
+        endTransform();
+        hovered_ = None;
+        if (!result) {
+            global()->updateSelectedGeometry();
+        }
     }
-
-    hovered_ = TopLeftRotate;
-    beginTransform(obb.xMin(), obb.yMin(), time);
-    continueTransform(obb.xMin(), obb.yMin(), angle);
-    endTransform();
-    hovered_ = None;
+    return result;
 }
 
 void TransformTool::onKeyboardModifiersChanged()

@@ -43,7 +43,6 @@ namespace VectorAnimationComplex
 class VAC;
 class KeyVertex;
 class KeyEdge;
-//class CellSet;
 }
 class Time;
 class Background;
@@ -189,6 +188,7 @@ private:
     uchar *pickingImg_;
     Picking::Object hoveredObject_;
     bool pickingIsEnabled_;
+    bool isMouseInSurface_;
 
     // PMR mouse event temp variables
     int currentAction_;
@@ -201,6 +201,11 @@ private:
 
     double shapeStartX_;
     double shapeStartY_;
+
+    double lastDragX_;
+    double lastDragY_;
+
+    int startDrawVertexCount;
 
     VectorAnimationComplex::CellSet lastDrawnCells_;
 
@@ -235,6 +240,9 @@ private:
     void drawPolygon(double x, double y, int countAngles, double rotation, ShapeDrawPhase drawPhase);
     void drawShape(double x, double y, ShapeType shapeType, int countAngles = 1, double initialRotation = 0, bool drawingCircle = false);
     void updateView();
+
+    void moveSelected(const double dx_mm, const double dy_mm);
+    void forcedMouseRelease();
 };
 
 #endif
