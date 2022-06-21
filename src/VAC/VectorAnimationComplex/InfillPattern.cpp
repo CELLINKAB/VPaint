@@ -322,6 +322,21 @@ QVector<QPointF> connectInfillAlongInset(const QVector<QVector<QPair<QPointF, in
     return connectedInfill;
 }
 
+bool previousBorderContainsNewBorder(const QPolygonF& newBorder, const QPolygonF& previousBorder, int smallestDistanceAllowedSquared)
+{
+    // Make distance slightly smaller to allow points on edge
+    smallestDistanceAllowedSquared *= 0.99999;
+    for (const auto point : newBorder) {
+        for (int i = 0; i < previousBorder.size(); i++) {
+            const auto startPoint = previousBorder[i];
+            const auto endPoint = previousBorder[(i + 1) % previousBorder.size()];
+            if (pointToLineSegmentDistanceSquared(point, startPoint, endPoint) < smallestDistanceAllowedSquared) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
 void InfillPattern::rectiLinearVerticalInfill()
 {
     QVector<QPointF> infillPoints{};
@@ -423,6 +438,7 @@ void InfillPattern::gridInfill()
 void InfillPattern::concentricInfill()
 {
     const auto insetSpacing = spacing_ / 2;
+    const auto insetSpacingSquared = std::pow(insetSpacing, 2);
     auto currentBorder = inset_;
 
     // Temporary fix to prevent the endless loop which has appeared sometimes and caused the freezing and crash
@@ -439,7 +455,11 @@ void InfillPattern::concentricInfill()
         currentBorder << currentBorder.first();
         data_ << currentBorder;
         currentBorder.pop_back();
+        const auto previousBorder = currentBorder;
         currentBorder = insetPolygon(currentBorder, insetSpacing);
+        if (!previousBorderContainsNewBorder(currentBorder, previousBorder, insetSpacingSquared)) {
+            break;
+        }
     }
 }
 
