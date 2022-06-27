@@ -6,7 +6,7 @@ InfillPattern::InfillPattern() = default;
 
 InfillPattern::~InfillPattern() = default;
 
-inline QPointF rotateAndNormalizePoint(double angle, const QPointF& vector)
+QPointF rotateAndNormalizePoint(double angle, const QPointF& vector)
 {
     constexpr auto r = 1;
     auto phi = atan2(vector.y(), vector.x());
@@ -148,6 +148,11 @@ double pointToPointDistanceSquared(QPointF a, QPointF b) {
 bool compare(double d1, double d2, quint8 precision)
 {
     return std::abs(d1 - d2) < std::pow(10, -precision);
+}
+
+int roundDouble(double value)
+{
+    return (int) (value * 1000);
 }
 
 QPolygonF traverseFromStartToEnd(QPointF startPoint, QPointF endPoint, int insetStartIndex, int insetEndIndex, const QPolygonF& inset)
@@ -322,6 +327,120 @@ QVector<QPointF> connectInfillAlongInset(const QVector<QVector<QPair<QPointF, in
     return connectedInfill;
 }
 
+bool previousBorderContainsNewBorder(const QPolygonF& newBorder, const QPolygonF& previousBorder, int smallestDistanceAllowedSquared)
+{
+    // Make distance slightly smaller to allow points on edge
+    smallestDistanceAllowedSquared *= 0.99999;
+    for (const auto point : newBorder) {
+        for (int i = 0; i < previousBorder.size(); i++) {
+            const auto startPoint = previousBorder[i];
+            const auto endPoint = previousBorder[(i + 1) % previousBorder.size()];
+            if (pointToLineSegmentDistanceSquared(point, startPoint, endPoint) < smallestDistanceAllowedSquared) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+QPointF getConvexPolygonCenterOfMass(const QPolygonF &polygon){
+    QPointF centerPoint;
+    for (const auto &point : polygon) {
+        centerPoint += point;
+    }
+    centerPoint /= polygon.size();
+    return centerPoint;
+}
+
+QPolygonF removeSelfIntersections(const QPolygonF& polygon)
+{
+    QPolygonF polygonWithoutIntersections;
+
+    // Take a point inside the polygon
+    const auto interiorPoint = getConvexPolygonCenterOfMass(polygon);
+    constexpr auto maxNumber = std::numeric_limits<double>::max();
+
+    // Intersect interior point to canvas edges with all segments and store intersections
+    QVector<QPointF> farAwayPoints{{0,0}, {0, maxNumber}, {maxNumber, 0}, {maxNumber, maxNumber}};
+    QVector<std::tuple<QPointF, int>> intersections;
+    for (const auto farAwayPoint : farAwayPoints) {
+        for (int i = 0; i < polygon.size(); i++) {
+            const auto startPoint = polygon[i];
+            const auto endPoint = polygon[(i + 1) % polygon.size()];
+            if (const auto intersectionPoint = segmentSegmentIntersection(interiorPoint, farAwayPoint, startPoint, endPoint)){
+                intersections.append({intersectionPoint.value(), i});
+            }
+        }
+    }
+
+    // Find the closest intersection segment
+    // This is to make sure we don't end up on a segment that should be removed
+    std::optional<std::tuple<QPointF, int>> closestSegmentToInteriorPoint{};
+    auto smallestDistance = maxNumber;
+    for (const auto &point : intersections){
+        if (const auto distanceSquared = pointToPointDistanceSquared(interiorPoint, std::get<0>(point)) < smallestDistance){
+            smallestDistance = distanceSquared;
+            closestSegmentToInteriorPoint = point;
+        }
+    }
+    if (!closestSegmentToInteriorPoint) {
+        qWarning() << "Failed to find closestSegmentToInteriorPoint";
+        return polygon;
+    }
+
+    // Start from closest segment and travel across polygon, piecing together new polygon without intersections
+    auto segmentIndex = std::get<1>(closestSegmentToInteriorPoint.value());
+    const auto endSegmentIndex = segmentIndex;
+    const auto polygonSize = polygon.size();
+
+    auto startPoint = std::get<0>(closestSegmentToInteriorPoint.value());// polygon[segmentIndex % polygonSize];
+    do {
+        // Check all lines against this line to find intersections
+        const auto endPoint = polygon[(segmentIndex + 1) % polygonSize];
+        const auto compareDirectionX = roundDouble(endPoint.x()) - roundDouble(startPoint.x()) > 0;
+        const auto compareDirectionY = roundDouble(endPoint.y()) - roundDouble(startPoint.y()) > 0;
+        auto innerSegmentIndex = (segmentIndex + 1) % polygonSize;
+        // Find self intersections
+        QVector<std::tuple<QPointF, int>> selfIntersections;
+        do {
+            if (const auto intersection = segmentSegmentIntersection(startPoint,
+                                                                     endPoint,
+                                                                     polygon[innerSegmentIndex % polygonSize],
+                                                                     polygon[(innerSegmentIndex + 1) % polygonSize])) {
+                // Make sure the point is in right direction
+                const auto directionX = roundDouble(intersection->x()) - roundDouble(startPoint.x()) > 0;
+                const auto directionY = roundDouble(intersection->y()) - roundDouble(startPoint.y()) > 0;
+                if (intersection.value() != startPoint && directionX == compareDirectionX && directionY == compareDirectionY) {
+                    selfIntersections.append({intersection.value(), innerSegmentIndex});
+                }
+            }
+            innerSegmentIndex = (innerSegmentIndex + 1) % polygonSize;
+        } while(innerSegmentIndex != segmentIndex);
+
+        // Find closest intersection segment
+        std::optional<std::tuple<QPointF, int>> closestSegmentToSegment{};
+        auto smallestDistance = maxNumber;
+        for (const auto &point : selfIntersections){
+            if (const auto distanceSquared = pointToPointDistanceSquared(startPoint, std::get<0>(point)); distanceSquared < smallestDistance){
+                smallestDistance = distanceSquared;
+                closestSegmentToSegment = point;
+            }
+        }
+
+        // Append correct point and increase segmentIndex
+        if (!closestSegmentToSegment) {
+            qWarning() << "Failed to find closestSegmentToSegment";
+            break;
+        }
+        const auto intersectionPoint = std::get<0>(closestSegmentToSegment.value());
+        polygonWithoutIntersections << intersectionPoint;
+        segmentIndex = std::get<1>(closestSegmentToSegment.value());
+        startPoint = intersectionPoint;
+    } while (segmentIndex != endSegmentIndex);
+
+    return polygonWithoutIntersections;
+}
+
 void InfillPattern::rectiLinearVerticalInfill()
 {
     QVector<QPointF> infillPoints{};
@@ -423,6 +542,7 @@ void InfillPattern::gridInfill()
 void InfillPattern::concentricInfill()
 {
     const auto insetSpacing = spacing_ / 2;
+    const auto insetSpacingSquared = std::pow(insetSpacing, 2);
     auto currentBorder = inset_;
 
     // Temporary fix to prevent the endless loop which has appeared sometimes and caused the freezing and crash
@@ -439,7 +559,11 @@ void InfillPattern::concentricInfill()
         currentBorder << currentBorder.first();
         data_ << currentBorder;
         currentBorder.pop_back();
+        const auto previousBorder = currentBorder;
         currentBorder = insetPolygon(currentBorder, insetSpacing);
+        if (!previousBorderContainsNewBorder(currentBorder, previousBorder, insetSpacingSquared)) {
+            break;
+        }
     }
 }
 
@@ -664,7 +788,7 @@ QPolygonF InfillPattern::insetPolygon(QPolygonF polygon, double distance)
             currentPos = point;
         }
     }
-    return prunedInset;
+    return removeSelfIntersections(prunedInset);
 }
 
 void InfillPattern::update(QPolygonF &polygon)
@@ -699,7 +823,6 @@ void InfillPattern::update(QPolygonF &polygon)
     default:
         qWarning() << "Unknown pattern_" << static_cast<uint8_t>(pattern_);
         break;
-
     }
 }
 

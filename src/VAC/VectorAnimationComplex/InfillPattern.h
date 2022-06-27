@@ -72,5 +72,6 @@ Q_VPAINT_EXPORT QPolygonF reversePolygonFOrientation(const QPolygonF& polygon);
 Q_VPAINT_EXPORT QVector<QVector<QPair<QPointF, int>>> pruneInfill(const QPolygonF& naiveInfill, const QPolygonF& inset);
 Q_VPAINT_EXPORT QVector<QPointF> connectInfillAlongInset(const QVector<QVector<QPair<QPointF, int>>>& prunedInfill, const QPolygonF& inset, bool connectBackToBeginning);
 Q_VPAINT_EXPORT std::tuple<int, int> startAndEndIndex(const QPolygonF& polygon, QPointF startPoint, QPointF endPoint);
+Q_VPAINT_EXPORT QPolygonF removeSelfIntersections(const QPolygonF& polygon);
 
 #endif // INFILLPATTERN_H
