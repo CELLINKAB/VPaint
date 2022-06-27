@@ -6,7 +6,7 @@ InfillPattern::InfillPattern() = default;
 
 InfillPattern::~InfillPattern() = default;
 
-inline QPointF rotateAndNormalizePoint(double angle, const QPointF& vector)
+QPointF rotateAndNormalizePoint(double angle, const QPointF& vector)
 {
     constexpr auto r = 1;
     auto phi = atan2(vector.y(), vector.x());
@@ -343,20 +343,6 @@ bool previousBorderContainsNewBorder(const QPolygonF& newBorder, const QPolygonF
     return true;
 }
 
-QPolygonF removeDuplicates(const QPolygonF originalPolygon)
-{
-    QPolygonF withoutDuplicates{};
-    QPointF currentPos{};
-    for (int i = 0; i < originalPolygon.size() - 1; i++) {
-        const auto point = originalPolygon[i % originalPolygon.size()];
-        if (point != currentPos) {
-            withoutDuplicates << point;
-            currentPos = point;
-        }
-    }
-    return withoutDuplicates;
-}
-
 QPointF getConvexPolygonInteriorPoint(const QPolygonF &polygon){
     QPointF centerPoint;
     for (const auto &point : polygon) {
@@ -366,7 +352,7 @@ QPointF getConvexPolygonInteriorPoint(const QPolygonF &polygon){
     return centerPoint;
 }
 
-QPolygonF removeIntersections(const QPolygonF& polygon)
+QPolygonF removeSelfIntersections(const QPolygonF& polygon)
 {
     QPolygonF polygonWithoutIntersections;
 
@@ -405,7 +391,6 @@ QPolygonF removeIntersections(const QPolygonF& polygon)
     // Start from closest segment and travel across polygon, piecing together new polygon without intersections
     auto segmentIndex = std::get<1>(closestSegmentToInteriorPoint.value());
     const auto endSegmentIndex = segmentIndex;
-//    polygonWithoutIntersections << polygon[segmentIndex];
     const auto polygonSize = polygon.size();
 
     auto startPoint = std::get<0>(closestSegmentToInteriorPoint.value());// polygon[segmentIndex % polygonSize];
@@ -803,7 +788,7 @@ QPolygonF InfillPattern::insetPolygon(QPolygonF polygon, double distance)
             currentPos = point;
         }
     }
-    return removeIntersections(prunedInset);
+    return removeSelfIntersections(prunedInset);
 }
 
 void InfillPattern::update(QPolygonF &polygon)
