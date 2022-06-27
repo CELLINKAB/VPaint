@@ -343,10 +343,10 @@ bool previousBorderContainsNewBorder(const QPolygonF& newBorder, const QPolygonF
     return true;
 }
 
-QPointF getConvexPolygonInteriorPoint(const QPolygonF &polygon){
+QPointF getConvexPolygonCenterOfMass(const QPolygonF &polygon){
     QPointF centerPoint;
     for (const auto &point : polygon) {
-        centerPoint = {centerPoint.x()+point.x(),centerPoint.y()+point.y()};
+        centerPoint += point;
     }
     centerPoint /= polygon.size();
     return centerPoint;
@@ -357,7 +357,7 @@ QPolygonF removeSelfIntersections(const QPolygonF& polygon)
     QPolygonF polygonWithoutIntersections;
 
     // Take a point inside the polygon
-    const auto interiorPoint = getConvexPolygonInteriorPoint(polygon);
+    const auto interiorPoint = getConvexPolygonCenterOfMass(polygon);
     constexpr auto maxNumber = std::numeric_limits<double>::max();
 
     // Intersect interior point to canvas edges with all segments and store intersections
