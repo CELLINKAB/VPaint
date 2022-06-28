@@ -52,6 +52,17 @@ bool intersect(QPointF A, QPointF B, QPointF C, QPointF D)
     return ccw(A, C, D) != ccw(B, C, D) && ccw(A, B, C) != ccw(A, B, D);
 }
 
+bool isClockwise(const QPolygonF& polygon)
+{
+    auto sum = 0;
+    for (int i = 0; i < polygon.size(); i++) {
+        const auto firstPoint = polygon[i];
+        const auto secondPoint = polygon[(i + 1) % polygon.size()];
+        sum += (secondPoint.x() - firstPoint.x()) * (firstPoint.y() + secondPoint.y());
+    }
+    return sum < 0;
+}
+
 std::optional<QPointF> segmentSegmentIntersection(QPointF A, QPointF B, QPointF C, QPointF D)
 {
     if (intersect(A, B, C, D)
@@ -429,7 +440,6 @@ QPolygonF removeSelfIntersections(const QPolygonF& polygon)
 
         // Append correct point and increase segmentIndex
         if (!closestSegmentToSegment) {
-            qWarning() << "Failed to find closestSegmentToSegment";
             break;
         }
         const auto intersectionPoint = std::get<0>(closestSegmentToSegment.value());
@@ -796,8 +806,16 @@ void InfillPattern::update(QPolygonF &polygon)
     spacing_ = (100 / density_) * 12;
     data_.clear();
     inset_.clear();
-    inset_ = insetPolygon(polygon, insetDistance_);
-    inputPolygon_ = polygon;
+    QPolygonF clockwisePolygon;
+    if (isClockwise(polygon)) {
+        clockwisePolygon = polygon;
+    } else {
+        for (int i = polygon.size() - 1; i >= 0; i--) {
+            clockwisePolygon << polygon[i];
+        }
+    }
+    inset_ = insetPolygon(clockwisePolygon, insetDistance_);
+    inputPolygon_ = clockwisePolygon;
     switch (pattern_) {
     case Pattern::None:
         break;
