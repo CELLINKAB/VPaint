@@ -88,7 +88,7 @@ public:
     void updateInfill();
 
     [[nodiscard]] QColor infillColor() const;
-    void setIffillColor(const QColor& c);
+    void setInfillColor(const QColor& c);
 
     [[nodiscard]] QColor infillHighlightedColor() const;
     void setInfillHighlightedColor(const QColor& c);

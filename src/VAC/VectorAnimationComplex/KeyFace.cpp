@@ -662,7 +662,7 @@ QColor KeyFace::infillColor() const
     return res;
 }
 
-void KeyFace::setIffillColor(const QColor& c)
+void KeyFace::setInfillColor(const QColor& c)
 {
     infillColor_[0] = c.redF();
     infillColor_[1] = c.greenF();

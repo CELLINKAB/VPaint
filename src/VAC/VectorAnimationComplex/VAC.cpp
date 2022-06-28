@@ -2048,7 +2048,7 @@ void VAC::changeInfillColor()
         if (auto keyFace = cell->toKeyFace())
         {
             emitCheckpoint = emitCheckpoint || infillColor != keyFace->infillColor();
-            keyFace->setIffillColor(infillColor);
+            keyFace->setInfillColor(infillColor);
             keyFace->adjustInfillHighlightedColor(global()->highlightColorRatio(), global()->highlightAlphaRatio());
             keyFace->adjustInfillSelectedColor(global()->selectColorRatio(), global()->selectAlphaRatio());
         }
@@ -2091,7 +2091,7 @@ void VAC::adjustSelectColors(Cell* cell)
     } else if (keyFace != nullptr) {
         colorChanged = colorChanged ? colorChanged : keyFace->color() != faceColor;
         keyFace->setColor(faceColor);
-        keyFace->setIffillColor(global()->infillColor());
+        keyFace->setInfillColor(global()->infillColor());
         keyFace->adjustInfillHighlightedColor(global()->highlightColorRatio(), global()->highlightAlphaRatio());
         keyFace->adjustInfillSelectedColor(global()->selectColorRatio(), global()->selectAlphaRatio());
     } else {
