@@ -225,6 +225,9 @@ public:
     inline int skippingCurveSamples() const { return skippingCurveSamples_; }
     void setSkippingCurveSamples(const int value);
 
+    inline bool isDrawCircleAsCurve() const { return isDrawCircleAsCurve_; }
+    void setIsDrawCircleAsCurve(const bool value);
+
     // Display modes
     enum DisplayMode {
         ILLUSTRATION,
@@ -384,6 +387,7 @@ private:
     bool isShowVerticesOnSelection_;
     bool isShowGrid_;
     bool isGridSnapping_;
+    bool isDrawCircleAsCurve_;
 
     double highlightColorRatio_;
     double highlightAlphaRatio_;
@@ -396,6 +400,7 @@ private:
     double pasteDeltaX_;
     double pasteDeltaY_;
     double selectedRotation_;
+    double lastSurfaceHeight_;
 
     int skippingCurveSamples_;
 

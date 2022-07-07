@@ -125,6 +125,7 @@ public:
     // Will refactor later.
     QImage drawToImage(double x, double y, double w, double h, int imgW, int imgH, bool useViewSettings);
     QImage drawToImage(Time t, double x, double y, double w, double h, int imgW, int imgH, bool useViewSettings);
+    void moveSelected(const double dx_mm, const double dy_mm);
 
 public slots:
     void update();        // update only this view (i.e., redraw the scene, leave other views unchanged)
@@ -241,7 +242,6 @@ private:
     void drawShape(double x, double y, ShapeType shapeType, int countAngles = 1, double initialRotation = 0, bool drawingCircle = false);
     void updateView();
 
-    void moveSelected(const double dx_mm, const double dy_mm);
     void forcedMouseRelease();
 };
 

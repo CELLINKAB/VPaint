@@ -102,6 +102,7 @@ signals:
     void mouseLeft(GLWidget * w);
 
 protected:
+    void initSurfaceFormat();
     // Low-level mouse/tablet events handling.
     // By design, do not handle multiple clics
     // On MousePress (or equivalent tablet event), calls:

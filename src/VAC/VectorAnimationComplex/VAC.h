@@ -111,6 +111,7 @@ public:
 
     // Modify highligthed and seleted state
     void setHoveredCell(Cell * cell);
+    void setHoveredAll();
     void hoveveredConnected(bool emitSignal = false);
     void hoveverShape(bool emitSignal = false);
     void setNoHoveredCell();
@@ -219,6 +220,8 @@ public:
 
     BoundingBox selectedBoundingBox() const;
     BoundingBox selectedOutlineBoundingBox() const;
+    BoundingBox hoveveredOutlineBoundingBox() const;
+    BoundingBox allOutlineBoundingBox() const;
 
     void setManualWidth(double newWidth);
     void setManualHeight(double newHeight);
@@ -228,6 +231,8 @@ public:
     void endDrawShape();
 
     QPointF dragStartPosition() const;
+
+    bool moveHovevered(const QPointF& delta);
 
     /////////////////////////////////////////////////////////////////
     //                 MOUSE CLIC ACTIONS                          //
