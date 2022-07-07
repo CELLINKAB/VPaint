@@ -992,6 +992,7 @@ void VAC::read(XmlStreamReader & xml)
             }
         }
     }
+    lastShapeID_++;
 
     read2ndPass_();
 }
@@ -1356,12 +1357,11 @@ void VAC::smartDelete_(const CellSet & cellsToDelete)
 QList<ShapeType> VAC::getAllShapesType()
 {
     QMap<int, ShapeType> types;
-    const auto keyVertices = instantVertices();
-    for (const auto keyVertex : keyVertices)
+    for (const auto cell : qAsConst(cells_))
     {
-        if (!keyVertex->isIgnored())
+        if (!cell->isIgnored())
         {
-            types.insert(keyVertex->shapeID(), keyVertex->shapeType());
+            types.insert(cell->shapeID(), cell->shapeType());
         }
     }
     return types.values();
@@ -1400,25 +1400,22 @@ QList<QColor> VAC::selectedShapesColor()
 QList<ShapeType> VAC::getSelectedShapeType()
 {
     QMap<int, ShapeType> types;
-    const KeyVertexSet keyVertices = selectedCells_;
-    for (const auto keyVertex : keyVertices)
+    for (const auto cell : selectedCells())
     {
-        if (!keyVertex->isIgnored())
+        if (!cell->isIgnored())
         {
-            types.insert(keyVertex->shapeID(), keyVertex->shapeType());
+            types.insert(cell->shapeID(), cell->shapeType());
         }
-    }
+    }    
     return types.values();
 }
 
-ShapeType VAC::shapeType(const CellSet & cells)
+ShapeType VAC::shapeType(const CellSet& cells)
 {
-    const KeyVertexSet keyVertices = cells;
-    for(const auto keyVertex : keyVertices)
+    for(const auto cell : cells)
     {
-        if (!keyVertex->isIgnored()) {
-            ShapeType type = keyVertex->shapeType();
-            return type;
+        if (!cell->isIgnored()) {
+            return cell->shapeType();;
         }
     }
     return ShapeType::NONE;
@@ -2152,6 +2149,26 @@ BoundingBox VAC::selectedOutlineBoundingBox() const
     return obb;
 }
 
+BoundingBox VAC::hoveveredOutlineBoundingBox() const
+{
+    BoundingBox obb;
+    for (auto cell : hoveredCells_)
+    {
+        obb.unite(cell->outlineBoundingBox(timeInteractivity_));
+    }
+    return obb;
+}
+
+BoundingBox VAC::allOutlineBoundingBox() const
+{
+    BoundingBox obb;
+    for (auto cell : cells_)
+    {
+        obb.unite(cell->outlineBoundingBox(timeInteractivity_));
+    }
+    return obb;
+}
+
 void VAC::setManualWidth(double newWidth)
 {
     if (transformTool_.setManualWidth(newWidth, timeInteractivity_)) {
@@ -2190,6 +2207,24 @@ void VAC::endDrawShape()
 QPointF VAC::dragStartPosition() const
 {
     return QPointF(x0_, y0_);
+}
+
+bool VAC::moveHovevered(const QPointF& delta)
+{
+    if (!hoveredCells_.isEmpty()) {
+        auto obb = hoveveredOutlineBoundingBox();
+        prepareDragAndDrop(obb.xMin(), obb.yMin(), timeInteractivity_);
+
+        performDragAndDrop(obb.xMin() + delta.x(), obb.yMin() + delta.y());
+        completeDragAndDrop();
+
+        setNoHoveredAllCells();
+
+        emit changed();
+        emit needUpdatePicking();
+        return global()->isShapeInSurface(draggedVertices(), draggedEdges(), delta);
+    }
+    return false;
 }
 
 bool VAC::cutFace_(KeyFace * face, KeyEdge * edge, CutFaceFeedback * feedback)
@@ -6208,10 +6243,24 @@ void VAC::setHoveredCell(Cell * cell)
     if (!hoveredCells_.contains(cell))
     {
         setNoHoveredAllCells();
-        if(cell)
+        if (cell)
         {
             hoveredCell_ = cell;
             hoveredCell_->setHovered(true);
+            hoveredCells_ << hoveredCell_;
+        }
+    }
+}
+
+void VAC::setHoveredAll()
+{
+    hoveredCells_.clear();
+    for (Cell* cell : cells())
+    {
+        if (cell)
+        {
+            hoveredCell_ = cell;
+            cell->setHovered(true);
             hoveredCells_ << hoveredCell_;
         }
     }

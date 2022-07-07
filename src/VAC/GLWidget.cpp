@@ -73,6 +73,7 @@ GLWidget::GLWidget(QWidget *parent, bool isOnly2D) :
     lastViewChangedPos_{0, 0},
     lastCameraPos_{0.0, 0.0}
 {
+    initSurfaceFormat();
     // To grab keyboard focus when user clicks
     setFocusPolicy(Qt::ClickFocus);
 
@@ -131,6 +132,24 @@ void GLWidget::enableCameraMovement(bool value)
     cameraDollyIsEnabled_ = value;
     cameraTravellingIsEnabled_ = value;
     cameraZoomIsEnabled_ = value;
+}
+
+void GLWidget::initSurfaceFormat()
+{
+    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+    format.setOption(QSurfaceFormat::DeprecatedFunctions);
+    format.setDepthBufferSize(24);
+    format.setRedBufferSize(8);
+    format.setGreenBufferSize(8);
+    format.setBlueBufferSize(8);
+    format.setAlphaBufferSize(0);
+    format.setStencilBufferSize(8);
+    format.setSamples(4);
+    format.setSwapBehavior(QSurfaceFormat::DefaultSwapBehavior);
+    format.setSwapInterval(0);
+    format.setColorSpace(QSurfaceFormat::DefaultColorSpace);
+    format.setProfile(QSurfaceFormat::CompatibilityProfile);
+    setFormat(format);
 }
 
 bool GLWidget::isBusy()

@@ -97,7 +97,6 @@ MainWindow::MainWindow(VPaint::Scene *_scene, QWidget* parent) :
     editCanvasSizeDialog_(0),
     exportingPng_(false)
 {
-    GLUtils::init();
     // Global object
     Global::initialize(this);
 

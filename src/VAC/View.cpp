@@ -72,11 +72,11 @@
 
 namespace {
 const constexpr auto CIRCLE_VERTICES = 40;
-const constexpr auto POLYGON_ARROUND_VERTICES_FROM = 4;
-const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
-const constexpr auto POLYGON_ARROUND_ALPHA = 0;
-const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
-const constexpr auto DRAW_CIRCLES_AS_CURVES = false;
+const constexpr auto POLYGON_AROUND_CIRCLE_VERTICES = 30;
+const constexpr auto POLYGON_AROUND_VERTICES_FROM = 4;
+const constexpr auto POLYGON_AROUND_VERTICES_TO = 9;
+const constexpr auto POLYGON_AROUND_ALPHA = 40;
+const constexpr auto POLYGON_AROUND_LINE_SIZE = 0.5;
 // Used to restrict the ability to draw very small shapes
 const constexpr auto MIN_MOUSE_MOVE_TO_DRAW = 5;
 }
@@ -1259,7 +1259,7 @@ void View::drawCircle(double x, double y, ShapeDrawPhase drawPhase)
     switch (drawPhase) {
     case ShapeDrawPhase::DRAW_PROCESS:
     {
-        if (DRAW_CIRCLES_AS_CURVES) {
+        if (global()->isDrawCircleAsCurve()) {
             // Draw circle using curved(will be enabled in future)
             // Now it's working fast but has some issues with infill
             drawShape(x, y, ShapeType::CIRCLE, CIRCLE_VERTICES);
@@ -1340,27 +1340,28 @@ void View::drawPolygon(double x, double y, int countAngles, double rotation, Sha
         // - correcting behavior of the grid snapping feature for polygons(works like as for circle/ellipse).
         // All cells of this bounding circle/ellipse are marked as ignored and aren't used for generate a G-code
         // It is now visible for debugging/demonstration, later it will be setted to transparent.
-        if (countAngles > POLYGON_ARROUND_VERTICES_FROM && countAngles < POLYGON_ARROUND_VERTICES_TO)
+        if (countAngles > POLYGON_AROUND_VERTICES_FROM && countAngles < POLYGON_AROUND_VERTICES_TO)
         {
-            const auto angleStep = M_PI / 50;
             QColor boundingColor = global()->edgeColor();
-            boundingColor.setAlpha(POLYGON_ARROUND_ALPHA);
+            boundingColor.setAlpha(POLYGON_AROUND_ALPHA);
 
             const auto rx = global()->selectedGeometry().width() / 2;
             const auto ry = global()->selectedGeometry().height() / 2;
             const auto xCenter = global()->selectedGeometry().x() + rx;
             const auto yCenter = global()->selectedGeometry().y() + ry;
-            vac_->beginSketchEdge(xCenter + rx, yCenter, POLYGON_ARROUND_LINE_SIZE, interactiveTime());
-            for (auto angle = 0.0; angle <= M_PI * 2; angle += angleStep)
+
+            vac_->beginSketchEdge(xCenter + rx, yCenter, POLYGON_AROUND_LINE_SIZE, interactiveTime());
+            for (auto i = 0; i <= POLYGON_AROUND_CIRCLE_VERTICES; i++)
             {
-                const auto newX = xCenter + rx * cos(angle);
-                const auto newY = yCenter + ry * sin(angle);
-                vac_->continueSketchEdge(newX, newY, POLYGON_ARROUND_LINE_SIZE);
+                auto angle = 2 * M_PI * i / POLYGON_AROUND_CIRCLE_VERTICES;
+                auto pos = QPointF(rx * cos(angle) + xCenter, ry * sin(angle) + yCenter);
+                vac_->continueSketchEdge(pos.x(), pos.y(), POLYGON_AROUND_LINE_SIZE);
             }
             vac_->endSketchEdge(false);
 
-            auto keyEdge = vac_->instantEdges().last();
+            const auto keyEdge = vac_->instantEdges().last();
             keyEdge->setIgnored(true);
+            keyEdge->setShapeType(ShapeType::POLYGON);
             vac_->assignShapeID(keyEdge);
             keyEdge->setColor(boundingColor);
             keyEdge->setHighlightedColor(boundingColor);
@@ -1517,6 +1518,7 @@ void View::drawShape(double x, double y, ShapeType shapeType, int countAngles, d
             vac_->continueSketchEdge(pos.x(), pos.y(), w);
         }
         vac_->endSketchEdge(false);
+
         auto keyEdge = vac_->instantEdges().last();
         keyEdge->setShapeType(shapeType);
         lastDrawnCells_ << keyEdge;

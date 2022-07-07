@@ -27,6 +27,9 @@
 #include "VectorAnimationComplex/KeyVertex.h"
 #include "VAC/VectorAnimationComplex/EdgeGeometry.h"
 #include "VAC/VectorAnimationComplex/EdgeSample.h"
+#include "VAC/VectorAnimationComplex/VAC.h"
+#include "VAC/VectorAnimationComplex/Cell.h"
+#include "Layer.h"
 
 #include <QDebug>
 #include <QApplication>
@@ -77,6 +80,7 @@ Global::Global(MainWindow * w) :
     isShowVerticesOnSelection_(false),
     isShowGrid_(false),
     isGridSnapping_(true),
+    isDrawCircleAsCurve_(false),
     highlightColorRatio_(1.2),
     highlightAlphaRatio_(2.0),
     selectColorRatio_(1.4),
@@ -87,6 +91,7 @@ Global::Global(MainWindow * w) :
     pasteDeltaX_(15),
     pasteDeltaY_(15),
     selectedRotation_(0.0),
+    lastSurfaceHeight_(0.0),
     skippingCurveSamples_(2),
     selectedGeometry_{0.0, 0.0, 0.0, 0.0},
     mousePastePosition_{0.0, 0.0},
@@ -1061,10 +1066,32 @@ void Global::setGridSnapping(bool gridSnapping)
 
 void Global::setSurfaceScaleFactor(double scaleFactor)
 {
-    surfaceScaleFactor_ = scaleFactor;
-    gridSize_ = gridSizeMM_ * scaleFactor;
-    sceneCenterPosition_.setX(scene()->left() + scene()->width() / 2);
-    sceneCenterPosition_.setY(scene()->top() + scene()->height() / 2);
+    if (surfaceScaleFactor_ != scaleFactor) {
+        const auto selectionScaleFactor = scaleFactor / surfaceScaleFactor_;
+        auto vac = scene()->activeLayer()->vac();
+        const auto prevCenterPos = sceneCenterPosition_;
+        sceneCenterPosition_.setX(scene()->left() + scene()->width() / 2);
+        sceneCenterPosition_.setY(scene()->top() + scene()->height() / 2);
+
+        const auto centerDX = sceneCenterPosition_.x() - prevCenterPos.x();
+        const auto centerDY = sceneCenterPosition_.y() - prevCenterPos.y();
+        if (surfaceScaleFactor_ != 1 && vac && vac->cells().count() > 0) {
+            vac->setHoveredAll();
+            vac->moveHovevered(QPointF(centerDX, centerDY));
+            vac->selectAll();
+
+            const auto obb2 = vac->selectedOutlineBoundingBox();
+            const auto newWidth = obb2.width() * selectionScaleFactor;
+            const auto newHeight = obb2.height() * selectionScaleFactor;
+            vac->setManualWidth(newWidth);
+            vac->setManualHeight(newHeight);
+        }
+
+
+        surfaceScaleFactor_ = scaleFactor;
+        gridSize_ = gridSizeMM_ * scaleFactor;
+
+    }
 }
 
 void Global::setGridSize(double gridSizeMM)
@@ -1183,7 +1210,7 @@ bool Global::isShapeInSurface(const VectorAnimationComplex::KeyVertexSet& vertic
     // Check samples of all edges(curves only)
     for (auto edge : edges)
     {
-        if (edge->shapeType() == ShapeType::CURVE) {
+        if (edge->shapeType() == ShapeType::CURVE || (isDrawCircleAsCurve_ && edge->shapeType() == ShapeType::CIRCLE)) {
             const auto samples = edge->geometry()->sampling();
             const auto inc = skippingCurveSamples() + 1;
             for (auto i = 0; i < samples.count(); i += inc)
@@ -1231,6 +1258,11 @@ void Global::setSkippingCurveSamples(const int value)
     skippingCurveSamples_ = value;
 }
 
+void Global::setIsDrawCircleAsCurve(const bool value)
+{
+    isDrawCircleAsCurve_ = value;
+}
+
 bool Global::useTabletPressure() const
 {
     return actionUseTabletPressure_->isChecked();
@@ -1248,13 +1280,12 @@ void Global::setEdgeWidth_(double w)
 
 void Global::updateSurfaceVertices()
 {
-    surfaceVertices_.clear();
-
     const auto x0 = scene()->left();
     const auto y0 = scene()->top();
     const auto w = scene()->width();
     const auto h = scene()->height();
 
+    surfaceVertices_.clear();
     switch (surfaceType_) {
     case VPaint::SurfaceType::WellPlate:
     case VPaint::SurfaceType::PetriDish:
@@ -1280,6 +1311,7 @@ void Global::updateSurfaceVertices()
     default:
         break;
     }
+    lastSurfaceHeight_ = h;
 }
 
 void Global::updateGrid()
