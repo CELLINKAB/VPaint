@@ -72,11 +72,11 @@
 
 namespace {
 const constexpr auto CIRCLE_VERTICES = 40;
-const constexpr auto POLYGON_ARROUND_CIRCLE_VERTICES = 30;
-const constexpr auto POLYGON_ARROUND_VERTICES_FROM = 4;
-const constexpr auto POLYGON_ARROUND_VERTICES_TO = 9;
-const constexpr auto POLYGON_ARROUND_ALPHA = 40;
-const constexpr auto POLYGON_ARROUND_LINE_SIZE = 0.5;
+const constexpr auto POLYGON_AROUND_CIRCLE_VERTICES = 30;
+const constexpr auto POLYGON_AROUND_VERTICES_FROM = 4;
+const constexpr auto POLYGON_AROUND_VERTICES_TO = 9;
+const constexpr auto POLYGON_AROUND_ALPHA = 40;
+const constexpr auto POLYGON_AROUND_LINE_SIZE = 0.5;
 // Used to restrict the ability to draw very small shapes
 const constexpr auto MIN_MOUSE_MOVE_TO_DRAW = 5;
 }
@@ -1340,22 +1340,22 @@ void View::drawPolygon(double x, double y, int countAngles, double rotation, Sha
         // - correcting behavior of the grid snapping feature for polygons(works like as for circle/ellipse).
         // All cells of this bounding circle/ellipse are marked as ignored and aren't used for generate a G-code
         // It is now visible for debugging/demonstration, later it will be setted to transparent.
-        if (countAngles > POLYGON_ARROUND_VERTICES_FROM && countAngles < POLYGON_ARROUND_VERTICES_TO)
+        if (countAngles > POLYGON_AROUND_VERTICES_FROM && countAngles < POLYGON_AROUND_VERTICES_TO)
         {
             QColor boundingColor = global()->edgeColor();
-            boundingColor.setAlpha(POLYGON_ARROUND_ALPHA);
+            boundingColor.setAlpha(POLYGON_AROUND_ALPHA);
 
             const auto rx = global()->selectedGeometry().width() / 2;
             const auto ry = global()->selectedGeometry().height() / 2;
             const auto xCenter = global()->selectedGeometry().x() + rx;
             const auto yCenter = global()->selectedGeometry().y() + ry;
 
-            vac_->beginSketchEdge(xCenter + rx, yCenter, POLYGON_ARROUND_LINE_SIZE, interactiveTime());
-            for (auto i = 0; i <= POLYGON_ARROUND_CIRCLE_VERTICES; i++)
+            vac_->beginSketchEdge(xCenter + rx, yCenter, POLYGON_AROUND_LINE_SIZE, interactiveTime());
+            for (auto i = 0; i <= POLYGON_AROUND_CIRCLE_VERTICES; i++)
             {
-                auto angle = 2 * M_PI * i / POLYGON_ARROUND_CIRCLE_VERTICES;
+                auto angle = 2 * M_PI * i / POLYGON_AROUND_CIRCLE_VERTICES;
                 auto pos = QPointF(rx * cos(angle) + xCenter, ry * sin(angle) + yCenter);
-                vac_->continueSketchEdge(pos.x(), pos.y(), POLYGON_ARROUND_LINE_SIZE);
+                vac_->continueSketchEdge(pos.x(), pos.y(), POLYGON_AROUND_LINE_SIZE);
             }
             vac_->endSketchEdge(false);
 
