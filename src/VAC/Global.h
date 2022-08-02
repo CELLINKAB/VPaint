@@ -168,7 +168,7 @@ public:
     void setPasteDelta(double delta);
 
     inline const QRectF& selectedGeometry() const { return selectedGeometry_; }
-    inline const double selectedRotation() const { return selectedRotation_; }
+    inline double selectedRotation() const { return selectedRotation_; }
     void updateSelectedGeometry(double x, double y, double w, double h, double rotation);
     void updateSelectedGeometry(double x, double y, double w, double h);
     void updateSelectedGeometry();
@@ -176,20 +176,20 @@ public:
     inline const QPointF& mousePastePosition() const { return mousePastePosition_; }
     void storeMousePastePos();
 
-    inline const VPaint::SurfaceType surfaceType() const { return surfaceType_; }
+    inline VPaint::SurfaceType surfaceType() const { return surfaceType_; }
     void setSurfaceType(VPaint::SurfaceType newSurfaceType);
 
-    inline const bool isShowGrid() const { return isShowGrid_; }
+    inline bool isShowGrid() const { return isShowGrid_; }
     void setShowGrid(bool showGrid);
 
-    inline const double gridSizeMM() const { return gridSizeMM_; }
-    inline const double gridSize() const { return gridSize_; }
+    inline double gridSizeMM() const { return gridSizeMM_; }
+    inline double gridSize() const { return gridSize_; }
     void setGridSize(double gridSizeMM);
 
-    inline const bool isGridSnapping() const { return isShowGrid_ && isGridSnapping_; }
+    inline bool isGridSnapping() const { return isShowGrid_ && isGridSnapping_; }
     void setGridSnapping(bool gridSnapping);
 
-    inline const double surfaceScaleFactor() const { return surfaceScaleFactor_; }
+    inline double surfaceScaleFactor() const { return surfaceScaleFactor_; }
     void setSurfaceScaleFactor(double scaleFactor);
 
     inline const QColor& surfaceBackGroundColor() const { return surfaceBackGroundColor_; }
