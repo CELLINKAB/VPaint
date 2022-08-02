@@ -339,13 +339,13 @@ public:
     ShapeType shapeType() const;
     void setShapeType(const ShapeType type);
 
-    inline const int shapeID() const { return shapeID_; }
+    inline int shapeID() const { return shapeID_; }
     void setShapeID(const int id);
 
-    inline const bool isIgnored() const { return isIgnored_; }
+    inline bool isIgnored() const { return isIgnored_; }
     void setIgnored(bool ignored);
 
-    inline const double rotation() const { return rotation_; }
+    inline double rotation() const { return rotation_; }
     void setRotation(const double newRotation);
 
 protected:
