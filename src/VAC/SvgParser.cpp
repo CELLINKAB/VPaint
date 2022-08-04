@@ -1587,7 +1587,7 @@ bool readRect(const QXmlStreamAttributes& attrs, VAC* vac, Time t,
     if(width == 0 || height == 0) return true;
 
     // The rx and ry attributes have a slightly more advanced default value, see W3 specifications for details
-    double rx, ry;
+    double rx = 0, ry = 0;
     bool rxOkay = false, ryOkay = false;
     if(attrs.hasAttribute("rx"))
     {
