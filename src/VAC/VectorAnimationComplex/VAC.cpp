@@ -540,7 +540,7 @@ void VAC::draw(Time time, ViewSettings & viewSettings)
     ViewSettings::DisplayMode displayMode = viewSettings.displayMode();
 
     // Illustration mode
-    if( displayMode == ViewSettings::ILLUSTRATION)
+    if( displayMode == ViewSettings::ILLUSTRATION )
     {
         // Draw all cells
         for(auto c: zOrdering_)
