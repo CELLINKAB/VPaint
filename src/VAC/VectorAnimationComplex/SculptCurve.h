@@ -1460,7 +1460,7 @@ public:
         std::vector< Curve<T>,Eigen::aligned_allocator<Curve<T> >  > res;
         // loop invariant: splitIndex-1 == res.size()
         //cout << "entering loop over split values" << endl;
-        while(splitIndex < nSplitValues)
+        while(splitIndex < int(nSplitValues))
         {
             //cout << "\n ## starting a new sub-curve ##" << endl;
 

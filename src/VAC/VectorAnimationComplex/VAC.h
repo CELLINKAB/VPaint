@@ -104,7 +104,7 @@ public:
     const CellSet & selectedCells() const;
     const CellSet& hoveredCells() const;
     int numSelectedCells() const;
-    inline const bool hasSelectedCells() const { return selectedCells_.count() != 0; }
+    inline bool hasSelectedCells() const { return selectedCells_.count() != 0; }
 
     // Get hovered transform widget id
     int hoveredTransformWidgetId() const;
