@@ -161,6 +161,8 @@ public:
 
     bool hasSceneContent() const;
 
+    bool isAllShapesInSurface() const;
+
 public slots:
     // --------- Tools ----------
     void test();

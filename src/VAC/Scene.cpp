@@ -828,6 +828,17 @@ bool Scene::hasSceneContent() const
     return false;
 }
 
+bool Scene::isAllShapesInSurface() const
+{
+    for (auto layer : layers_)
+    {
+        if (layer && !global()->isShapeInSurface(layer->vac()->instantVertices(), layer->vac()->instantEdges())) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void Scene::deleteSelectedCells()
 {
     Layer * layer = activeLayer();

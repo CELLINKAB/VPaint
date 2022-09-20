@@ -210,6 +210,7 @@ public:
 
     bool isPointInSurface(const double x, const double y) const;
     bool isShapeInSurface(const VectorAnimationComplex::KeyVertexSet& vertices, const VectorAnimationComplex::KeyEdgeSet& edges, const QPointF delta) const;
+    bool isShapeInSurface(const VectorAnimationComplex::KeyVertexList& vertices, const VectorAnimationComplex::KeyEdgeList& edges) const;
     bool isShapeInSurface(const QVector<QPointF>& vertices) const;
 
     // A delta in millimeters used for moving shapes by

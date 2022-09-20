@@ -1225,6 +1225,11 @@ bool Global::isShapeInSurface(const VectorAnimationComplex::KeyVertexSet& vertic
     return true;
 }
 
+bool Global::isShapeInSurface(const VectorAnimationComplex::KeyVertexList& vertices, const VectorAnimationComplex::KeyEdgeList& edges) const
+{   
+    return isShapeInSurface(VectorAnimationComplex::KeyVertexSet::fromList(vertices), VectorAnimationComplex::KeyEdgeSet::fromList(edges), QPointF());
+}
+
 bool Global::isShapeInSurface(const QVector<QPointF>& vertices) const
 {
     for (auto position : vertices)
