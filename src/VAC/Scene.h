@@ -148,13 +148,13 @@ public:
     void setInfillPatternForSelectedCells(InfillPattern::Pattern pattern);
     QList<ShapeType> getActiveLayerShapesType();
 
-    bool inline isUseConsistentLayerHeight() const { return isUseConsistentLayerHeight_; }
+    [[nodiscard]] bool isUseConsistentLayerHeight() const { return isUseConsistentLayerHeight_; }
     void setUseConsistentLayerHeight(bool useConsistentHeight);
 
-    inline qreal consistentLayerHeight() const { return consistentLayerHeight_; }
+    [[nodiscard]] qreal consistentLayerHeight() const { return consistentLayerHeight_; }
     void setConsistentLayerHeight(const qreal height);
 
-    inline qreal firstLayerHeightPercents() const { return firstLayerHeightPercents_; }
+    qreal firstLayerHeightPercents() const { return firstLayerHeightPercents_; }
     void setFirstLayerHeightPercents(const qreal percents);
 
     SurfaceType getLoadedSurfaceType();
