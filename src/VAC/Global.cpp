@@ -31,11 +31,14 @@
 #include "VAC/VectorAnimationComplex/Cell.h"
 #include "Layer.h"
 
+#include <QtMath>
 #include <QDebug>
 #include <QApplication>
 #include <QKeyEvent>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QPolygonF>
+#include <QPointF>
 #include <QToolBar>
 #include <QMenu>
 #include <QAction>

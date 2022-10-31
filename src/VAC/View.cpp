@@ -33,6 +33,7 @@
 #include "MainWindow.h"
 
 #include <QtDebug>
+#include <QtMath>
 #include <QApplication>
 #include <QPushButton>
 #include <cmath>

@@ -1,6 +1,8 @@
 ﻿#include "InfillPattern.h"
 
 #include <optional>
+#include <QDebug>
+#include <QtOpenGL>
 
 InfillPattern::InfillPattern() = default;
 
