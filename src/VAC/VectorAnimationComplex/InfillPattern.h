@@ -4,6 +4,7 @@
 #include "VAC/vpaint_global.h"
 
 #include <optional>
+#include <QPolygonF>
 
 // Creates and draws different infill patterns
 // NOTE: Only works for convex shapes
