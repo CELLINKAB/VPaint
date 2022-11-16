@@ -81,8 +81,10 @@ GLWidget::GLWidget(QWidget *parent, bool isOnly2D) :
     //setAutoFillBackground(false);
 
     // Making  mouse  move events  occur  even  without any  buttons
-    // pressed. Useful for picking points
-    setMouseTracking(true);
+    // pressed. Useful for picking points.
+    // On enabling mouse tracking creates problem when testing with Squish, so disabled it in squish mode.
+    auto value = qApp->arguments().contains("--squishtest");
+    setMouseTracking(!value);
 
     // lighting initialisation
     GL_LIGHT_[0] = GL_LIGHT0;
