@@ -211,7 +211,7 @@ void Layer::read(XmlStreamReader & xml)
     emit layerAttributesChanged();
 }
 
-void Layer::write(XmlStreamWriter & xml)
+void Layer::write(XmlStreamWriter & xml) const
 {
     // Name
     xml.writeAttribute("name", name());

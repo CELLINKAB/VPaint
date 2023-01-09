@@ -43,6 +43,8 @@ public:
     ReverseIterator rend();
     ConstIterator cbegin() const;
     ConstIterator cend() const;
+    ConstIterator begin() const { return cbegin(); }
+    ConstIterator end() const { return cend(); }
     ConstReverseIterator crbegin() const;
     ConstReverseIterator crend() const;
 

@@ -98,10 +98,10 @@ public:
     void exportSVG(Time t, QTextStream & out);
     void save(QTextStream & out);
     void read(QTextStream & in);
-    void writeAllLayers(XmlStreamWriter & xml);
+    void writeAllLayers(XmlStreamWriter & xml) const;
     void readOneLayer(XmlStreamReader & xml);
     void readCanvas(XmlStreamReader & xml);
-    void writeCanvas(XmlStreamWriter & xml);
+    void writeCanvas(XmlStreamWriter & xml) const;
     void relativeRemap(const QDir & oldDir, const QDir & newDir);
 
     // Get layer from index

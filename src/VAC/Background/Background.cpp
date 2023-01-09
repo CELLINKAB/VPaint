@@ -519,7 +519,7 @@ QString toString(double x)
 }
 }
 
-void Background::write(XmlStreamWriter & xml)
+void Background::write(XmlStreamWriter & xml) const
 {
     // Color
     xml.writeAttribute("color", "rgba(" + toString(color().red()) + "," +

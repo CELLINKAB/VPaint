@@ -121,7 +121,7 @@ public:
     void emitCheckpoint() {emit checkpoint();}
 
     // Read/Write XML
-    void write(XmlStreamWriter & xml);
+    void write(XmlStreamWriter & xml) const;
     void read(XmlStreamReader & xml);
 
     // SVG export
