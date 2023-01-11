@@ -253,7 +253,7 @@ void Scene::read(QTextStream & in)
     */
 }
 
-void Scene::writeAllLayers(XmlStreamWriter & xml)
+void Scene::writeAllLayers(XmlStreamWriter & xml) const
 {
     for(Layer * layer: qAsConst(layers_))
     {
@@ -337,7 +337,7 @@ void Scene::readCanvas(XmlStreamReader & xml)
     xml.skipCurrentElement();
 }
 
-void Scene::writeCanvas(XmlStreamWriter & xml)
+void Scene::writeCanvas(XmlStreamWriter & xml) const
 {
     xml.writeAttribute("position", QString().setNum(left()) + " " + QString().setNum(top()));
     xml.writeAttribute("size", QString().setNum(width()) + " " + QString().setNum(height()));
@@ -347,8 +347,6 @@ void Scene::writeCanvas(XmlStreamWriter & xml)
     xml.writeAttribute("surfaceType", QString().setNum(static_cast<int>(global()->surfaceType())));
     xml.writeAttribute("sceneWidth", QString().setNum(width()));
     xml.writeAttribute("sceneHeight", QString().setNum(height()));
-
-
 }
 
 void Scene::relativeRemap(const QDir & oldDir, const QDir & newDir)

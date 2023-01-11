@@ -74,7 +74,7 @@ public:
     void clear();
 
     // Serialization / Unserialization
-    void write(XmlStreamWriter & xml);
+    void write(XmlStreamWriter & xml) const;
     void read(XmlStreamReader & xml);
 
     // Initializations

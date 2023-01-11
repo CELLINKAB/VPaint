@@ -62,7 +62,7 @@ public:
     void invertSelection() override;
 
     void read(XmlStreamReader & xml);
-    void write(XmlStreamWriter & xml);
+    void write(XmlStreamWriter & xml) const;
 
     Background * background() const { return background_; }
     VectorAnimationComplex::VAC * vac() const { return vac_; }

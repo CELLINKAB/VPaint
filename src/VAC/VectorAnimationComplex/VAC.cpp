@@ -944,10 +944,11 @@ int VAC::hoveredTransformWidgetId() const
 
 // ----------------------  Save & Load -------------------------
 
-void VAC::write(XmlStreamWriter & xml)
+void VAC::write(XmlStreamWriter & xml) const
 {
-    for(Cell * cell: zOrdering_)
+    for(const auto* cell : std::as_const(zOrdering_)) {
         cell->write(xml);
+    }
 }
 
 void VAC::clear()
