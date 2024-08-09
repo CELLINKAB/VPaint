@@ -238,6 +238,10 @@ void computeTrianglesFromCycles(const QList<AnimatedCycle> & cycles, Triangles &
     {
         tobj = tobjOffline;
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC ignored "-Wcast-function-type"
+#endif
         gluTessCallback(tobj, GLU_TESS_VERTEX,
                         (GLvoid (CALLBACK*) ()) &offlineTessVertex);
         gluTessCallback(tobj, GLU_TESS_BEGIN,
@@ -248,6 +252,9 @@ void computeTrianglesFromCycles(const QList<AnimatedCycle> & cycles, Triangles &
                         (GLvoid (CALLBACK*) ()) &offlineTessError);
         gluTessCallback(tobj, GLU_TESS_COMBINE,
                         (GLvoid (CALLBACK*) ()) &offlineTessCombine);
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     }
 
     // Using the tesselation object
