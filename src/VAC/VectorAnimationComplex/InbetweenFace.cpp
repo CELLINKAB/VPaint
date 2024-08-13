@@ -240,7 +240,7 @@ void computeTrianglesFromCycles(const QList<AnimatedCycle> & cycles, Triangles &
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
-#pragma GCC ignored "-Wcast-function-type"
+#pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
         gluTessCallback(tobj, GLU_TESS_VERTEX,
                         (GLvoid (CALLBACK*) ()) &offlineTessVertex);
