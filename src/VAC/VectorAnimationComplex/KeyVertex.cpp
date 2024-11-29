@@ -18,6 +18,7 @@
 #include "KeyEdge.h"
 #include "InbetweenVertex.h"
 #include "EdgeGeometry.h"
+#include "VAC.h"
 
 #include "../OpenGL.h"
 #include <QtDebug>
@@ -145,7 +146,7 @@ KeyVertex::KeyVertex(VAC * vac, QTextStream & in) :
     // the   expexcted   result   if
     // whitespace are in pos
     QStringList list = stringPos.split(QRegExp("\\s*[\\(\\,\\)]\\s*"),
-                             QString::SkipEmptyParts);
+                             QtSkipEmptyParts);
     pos_[0] = list[0].toDouble();
     pos_[1] = list[1].toDouble();
 

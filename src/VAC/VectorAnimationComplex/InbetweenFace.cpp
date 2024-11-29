@@ -665,13 +665,13 @@ InbetweenFace::InbetweenFace(VAC * vac, XmlStreamReader & xml) :
     }
 
     // Before faces
-    QStringList beforefacesSL = xml.attributes().value("beforefaces").toString().simplified().split(' ', QString::SkipEmptyParts);
+    QStringList beforefacesSL = xml.attributes().value("beforefaces").toString().simplified().split(' ', QtSkipEmptyParts);
     tempBeforeFaces_.clear();
     for(int i=0; i<beforefacesSL.size(); ++i)
         tempBeforeFaces_ << beforefacesSL[i].toInt();
 
     // After faces
-    QStringList afterfacesSL = xml.attributes().value("afterfaces").toString().simplified().split(' ', QString::SkipEmptyParts);
+    QStringList afterfacesSL = xml.attributes().value("afterfaces").toString().simplified().split(' ', QtSkipEmptyParts);
     tempAfterFaces_.clear();
     for(int i=0; i<afterfacesSL.size(); ++i)
         tempAfterFaces_ << afterfacesSL[i].toInt();

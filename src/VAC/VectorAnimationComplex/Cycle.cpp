@@ -23,6 +23,7 @@
 #include "../SaveAndLoad.h"
 
 #include <QMessageBox>
+#include <QtDebug>
 
 namespace VectorAnimationComplex
 {
@@ -627,7 +628,7 @@ void Cycle::fromString(const QString & str)
     halfedges_.clear();
 
     // Split at ',', '[', ']', or any whitespace character
-    QStringList strList = str.split(QRegExp("[\\,\\s\\[\\]]"), QString::SkipEmptyParts);
+    QStringList strList = str.split(QRegExp("[\\,\\s\\[\\]]"), QtSkipEmptyParts);
 
     // If the empty cycle was written and read - then leaving the empty cycle
     if (strList.isEmpty())
@@ -693,10 +694,11 @@ QTextStream & operator<<(QTextStream & out, const VectorAnimationComplex::Cycle 
     return out;
 }
 
-#include <QtDebug>
 
 QTextStream & operator>>(QTextStream & in, VectorAnimationComplex::Cycle & cycle)
 {
+    using namespace VectorAnimationComplex;
+
     // Read cycle input as string
     QString stringCycle;
     QChar c;
@@ -711,7 +713,7 @@ QTextStream & operator>>(QTextStream & in, VectorAnimationComplex::Cycle & cycle
     int i = stringCycle.indexOf('[');
     QString stringVertexStartingPoint = stringCycle.left(i);
     QString stringHalfedges = stringCycle.right(stringCycle.size()-i);
-    QStringList stringListVertexStartingPoint = stringVertexStartingPoint.split(' ',QString::SkipEmptyParts);
+    QStringList stringListVertexStartingPoint = stringVertexStartingPoint.split(' ', QtSkipEmptyParts);
 
     // Process vertex and starting point
     if(stringListVertexStartingPoint.size() >= 1)

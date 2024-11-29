@@ -138,7 +138,14 @@ template <class TEdge>
 QTextStream & operator>>(QTextStream & in, VectorAnimationComplex::HalfedgeBase<TEdge> & h)
 {
     QString nuple; in >> nuple;
-    QStringList list = nuple.split(QRegExp("\\s*[\\(\\,\\)]\\s*"), QString::SkipEmptyParts);
+    QStringList list = nuple.split(QRegExp("\\s*[\\(\\,\\)]\\s*"),
+#if QT_VERSION < QT_VERSION_CHECK(5,15,15)
+                                   QtSkipEmptyParts
+#else
+                                   Qt::SkipEmptyParts
+#endif
+                                   );
+
     h.edge = 0;
     h.tempId_ = list[0].toInt();
     h.side = list[1].toInt();

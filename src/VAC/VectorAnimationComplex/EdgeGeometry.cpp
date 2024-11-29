@@ -20,6 +20,7 @@
 #include "../XmlStreamWriter.h"
 #include "../XmlStreamReader.h"
 
+#include "VAC.h"
 #include "../SaveAndLoad.h"
 #include "../OpenGL.h"
 #include <cmath>
@@ -689,7 +690,7 @@ LinearSpline::LinearSpline(QTextStream & in) //:
     {
         in >> nuple;
         QStringList list = nuple.split(QRegExp("\\s*[\\(\\,\\)]\\s*"),
-                                 QString::SkipEmptyParts);
+                                 QtSkipEmptyParts);
         vertices << EdgeSample(list[0].toDouble(), list[1].toDouble(), list[2].toDouble());
     }
     in >> bracket;
@@ -726,7 +727,7 @@ LinearSpline::LinearSpline(const QStringRef & str)
 
     // Get data from string
     QStringList strList = str.toString() // Expensive, to change by only using QStringRef
-               .split(QRegExp("[\\,\\s]"), QString::SkipEmptyParts); // either ',', or any whitespace character
+               .split(QRegExp("[\\,\\s]"), QtSkipEmptyParts); // either ',', or any whitespace character
     QVector<double> d;
     for(int i=0; i<strList.size(); ++i)
         d << strList[i].toDouble();
@@ -756,7 +757,7 @@ LinearSpline::LinearSpline(XmlStreamReader & xml)
     // Get data from string
     QStringList strList =
             xml.attributes().value("curvedata").toString()
-               .split(QRegExp("[\\,\\s]"), QString::SkipEmptyParts); // either ',', or any whitespace character
+               .split(QRegExp("[\\,\\s]"), QtSkipEmptyParts); // either ',', or any whitespace character
     QVector<double> d;
     for(int i=0; i<strList.size(); ++i)
         d << strList[i].toDouble();
